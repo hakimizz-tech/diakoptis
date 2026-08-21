@@ -1,0 +1,14 @@
+Value INTERFACE (\S+)
+Value LANES (\S+(?:,\S+)*)
+Value SPEED (\S+)
+Value MTU (\d+)
+Value FEC (\S+)
+Value ALIAS (\S+)
+Value VLAN (\S+)
+Value OPER_STATUS (\S+)
+Value ADMIN_STATUS (\S+)
+Value TYPE (.+?)
+
+Start
+  ^Interface\s+Lanes\s+Speed\s+MTU\s+FEC\s+Alias\s+Vlan\s+Oper\s+Admin\s+Type\s*$$
+  ^${INTERFACE}\s+${LANES}\s+${SPEED}\s+${MTU}\s+${FEC}\s+${ALIAS}\s+${VLAN}\s+${OPER_STATUS}\s+${ADMIN_STATUS}\s+${TYPE}\s*$$ -> Record
