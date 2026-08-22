@@ -25,6 +25,7 @@ classifiers = [
 
 # Core dependencies needed to run the CLI
 dependencies = [
+    "ntc-templates>=3.5.0",
     "prompt-toolkit>=3.0.0", # Interactive shell framework
     "netmiko>=4.3.0",        # SSH connection manager (includes asterfusion_asternos driver)
     "rich>=13.0.0",          # Terminal formatting and tables

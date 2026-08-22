@@ -10,10 +10,10 @@ from typing import Dict, List, Any, Callable, Optional
 
 class Severity(Enum):
     """Defines the severity level of a diagnostic finding."""
-    PASS = "PASS"       # Everything is healthy
-    INFO = "INFO"       # General information, no action needed
-    WARNING = "WARNING" # Potential issue (e.g., high memory, single CRC error)
-    CRITICAL = "CRITICAL" # Hard failure (e.g., link down, BGP peer down)
+    PASS = "PASS"           # Everything is healthy
+    INFO = "INFO"           # General information, no action needed
+    WARNING = "WARNING"     # Potential issue (e.g., high memory, single CRC error)
+    CRITICAL = "CRITICAL"   # Hard failure (e.g., link down, BGP peer down)
 
 
 @dataclass
