@@ -1,19 +1,20 @@
 """
-Diagnostics Engine module.
+Diagnostics Engine module (v2).
 Analyzes parsed switch data against predefined playbooks to surface actionable findings.
 """
 
 from enum import Enum
 from dataclasses import dataclass, field
 from typing import Dict, List, Any, Callable, Optional
+from asterfusion.logging.session_log import audit_logger
 
 
 class Severity(Enum):
     """Defines the severity level of a diagnostic finding."""
-    PASS = "PASS"           # Everything is healthy
-    INFO = "INFO"           # General information, no action needed
-    WARNING = "WARNING"     # Potential issue (e.g., high memory, single CRC error)
-    CRITICAL = "CRITICAL"   # Hard failure (e.g., link down, BGP peer down)
+    PASS = "PASS"       # Everything is healthy
+    INFO = "INFO"       # General information, no action needed
+    WARNING = "WARNING" # Potential issue (e.g., high memory, single CRC error)
+    CRITICAL = "CRITICAL" # Hard failure (e.g., link down, BGP peer down)
 
 
 @dataclass
@@ -35,18 +36,14 @@ class DiagnosticsEngine:
         Initializes the Diagnostics Engine and registers available playbooks.
         """
         # A registry mapping a command_key to its diagnostic function (playbook)
-        # In a larger app, you could dynamically import these using pkgutil or importlib.
         self._playbooks: Dict[str, Callable] = {}
-        
-        # We will register them dynamically so engine.py doesn't need to be 
-        # modified every time you write a new playbook.
 
     def register_playbook(self, command_key: str, playbook_func: Callable) -> None:
         """
         Registers a playbook function to analyze a specific command.
         
         Args:
-            command_key: The friendly command name (e.g., 'check_interface').
+            command_key: The friendly command name (e.g., 'check_interfaces').
             playbook_func: A function that takes (parsed_data, **kwargs) and returns List[DiagnosticFinding].
         """
         self._playbooks[command_key] = playbook_func
@@ -67,19 +64,15 @@ class DiagnosticsEngine:
         playbook_func = self._playbooks.get(command_key)
         
         if not playbook_func:
-            # If no playbook is registered for this command, just return an INFO finding.
-            # This allows the CLI to gracefully fall back to just displaying the raw table.
-            return [
-                DiagnosticFinding(
-                    severity=Severity.INFO,
-                    message=f"No automated diagnostic playbook mapped for '{command_key}'. Visual inspection required."
-                )
-            ]
+            # Silent fallback for multi-switch execution. 
+            # The Renderer will just display the aggregated table without spamming INFO messages.
+            return []
 
         try:
             # Execute the playbook and return its findings
             return playbook_func(parsed_data, **kwargs)
         except Exception as e:
+            audit_logger.error(f"Playbook execution failed for '{command_key}': {e}")
             return [
                 DiagnosticFinding(
                     severity=Severity.WARNING,

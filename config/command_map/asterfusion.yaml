@@ -1,0 +1,116 @@
+# config/command_map/asterfusion.yaml
+#
+# Vendor command map: Asterfusion (AsterNOS / sonic-cli)
+# Parsing strategy for now: ntc-templates only — see plan.md §10 (parser fallback chain).
+#
+# Every entry below sets `parse: ntc`. That tells the Output Parser to skip the local
+# TextFSM lookup entirely (no files exist yet under templates/asterfusion/) and delegate
+# straight to Netmiko's built-in `send_command(cmd, use_textfsm=True)`, which calls into
+# ntc-templates itself — matching by its own device_type as the "platform" and the raw
+# command string. No custom lookup code is needed on our side for this to work.
+#
+# KNOWN LIMITATION (checked against ntc-templates' public template index): there is
+# currently no "asterfusion_asternos" platform, and no generic "sonic" platform either.
+# That means every command below will miss in ntc-templates today and the operator will
+# just see raw, unparsed text — which is safe (use_textfsm=True returns a plain string on
+# no match, it does not raise) but not yet structured. This file is deliberately
+# forward-compatible rather than non-functional: the moment ntc-templates (or a
+# private/vendored template pack) adds asterfusion_asternos coverage, every entry here
+# starts returning structured data with zero code changes.
+#
+# TO GRADUATE AN ENTRY TO A LOCAL TEMPLATE LATER:
+#   change `parse: ntc` to `parse: templates/asterfusion/<name>.textfsm`
+#   (local always wins over ntc-templates — see the fallback chain in plan.md §10)
+#
+# Native commands below are illustrative — verify exact sonic-cli syntax against
+# docs.asternos.com or `?` / Tab-completion on real hardware before relying on them.
+
+check_environment:
+  description: "Check system hardware health (Fans, Power Supplies, Temperature)"
+  native: ["show environment"]
+  parse: "textfsm:asterfusion/sonic_show_environment.textfsm"
+
+check_optics:
+  description: "Show optical transceiver DOM/DDM levels (Tx/Rx power) for all ports"
+  native: ["show interface transceiver"]
+  parse: "ntc:cisco_ios:show interface transceiver"
+
+check_optics_port:
+  description: "Show optical DOM/DDM levels for a specific port (e.g., check optics_port Ethernet4)"
+  native: ["show interface {target} transceiver"]
+  parse: "raw" # Verbose paragraph output breaks tables; must remain raw.
+
+
+# Layer 2 / Switching (Interfaces, MAC, LLDP, LAG)
+check_interfaces:
+  description: "Show general interface operational status"
+  native: ["show interface status"]
+  parse: "textfsm:asterfusion/sonic_show_interface_status.textfsm" # Our custom local template
+
+check_interface_errors:
+  description: "Show CRC, frame, and physical layer errors"
+  native: ["show interface counters errors"]
+  parse: "ntc:cisco_ios:show interface counters errors"
+
+check_lag:
+  description: "Verify Port-Channel / LACP bundle status"
+  native: ["show portchannel summary"]
+  parse: "ntc:cisco_ios:show portchannel summary"
+
+show_lldp:
+  description: "Show connected neighbors via LLDP"
+  native: ["show lldp neighbors"]
+  parse: "ntc:cisco_ios:show lldp neighbors"
+
+show_mac:
+  description: "Show MAC address table"
+  native: ["show mac"]
+  parse: "ntc:cisco_ios:show mac-address-table" # Mapped to standard Cisco NTC filename
+
+show_vlan:
+  description: "Show VLAN configuration and member ports"
+  native: ["show vlan brief"]
+  parse: "ntc:cisco_ios:show vlan brief"
+
+# Layer 3 / Routing & Forwarding (FRRouting engine)
+show_arp:
+  description: "Show the ARP cache (IP to MAC mapping)"
+  native: ["show arp"]
+  parse: "ntc:cisco_ios:show arp"
+
+show_route:
+  description: "Show the global routing table"
+  native: ["show ip route"]
+  parse: "ntc:cisco_ios:show ip route"
+
+check_bgp:
+  description: "Check BGP peer state and prefix counts"
+  native: ["show ip bgp summary"]
+  parse: "ntc:cisco_ios:show ip bgp summary"
+
+check_bgp_neighbor:
+  description: "Deep dive into a specific BGP neighbor (e.g., check bgp_neighbor 10.0.0.1)"
+  native: ["show ip bgp neighbors {target}"]
+  parse: "ntc:cisco_ios:show ip bgp neighbors"
+
+
+# System / Admin (CPU, Memory, Logs)
+check_cpu:
+  description: "Check CPU utilization and active processes"
+  native: ["show processes cpu"]
+  parse: "ntc:cisco_ios:show processes cpu"
+
+check_memory:
+  description: "Check system RAM utilization"
+  native: ["show memory"]
+  parse: "textfsm:asterfusion/sonic_show_memory.textfsm"
+
+show_logs:
+  description: "Show recent system syslog messages"
+  native: ["show logging"]
+  parse: "raw" # Logs should never be parsed into tables
+
+show_version:
+  description: "Show OS version, uptime, and system serial numbers"
+  native: ["show version"]
+  parse: "ntc:cisco_ios:show version"

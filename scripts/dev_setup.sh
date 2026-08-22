@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Asterfusion CLI - Developer Environment Setup Script
+# Asterfusion CLI (v2) - Developer Environment Setup Script
 # This script initializes a local development environment.
 # Run this from the root of the repository: ./scripts/dev_setup.sh
 
@@ -40,11 +40,15 @@ echo -e "${BLUE}[*] Upgrading pip...${NC}"
 pip install --upgrade pip
 
 echo -e "${BLUE}[*] Installing asterfusion-cli in editable mode with [dev] dependencies...${NC}"
-# This reads the pyproject.toml and installs cmd2, netmiko, rich, pytest, ruff, etc.
+# This reads the pyproject.toml and installs the CLI, plus dev tools (pytest, etc.)
 pip install -e ".[dev]"
 
-# 4. Scaffold configuration files safely
-echo -e "${BLUE}[*] Setting up local configuration files...${NC}"
+# 4. Scaffold configuration and runtime directories
+echo -e "${BLUE}[*] Setting up local configuration and runtime folders...${NC}"
+
+# Ensure runtime directories exist
+mkdir -p logs
+mkdir -p config/command_map
 
 if [[ ! -f ".env" ]]; then
     echo -e "    -> Creating .env from template..."

@@ -1,7 +1,7 @@
 """
-Show command handler.
-Translates user 'show ...' input into a mapped command and executes it.
-Falls back to raw execution if the command is not mapped.
+Show command handler (v2).
+Translates user 'show ...' input into a mapped command, executes it concurrently 
+across all active switches via the SessionPool, and aggregates the results.
 """
 
 from asterfusion.logging.session_log import audit_logger
@@ -19,20 +19,22 @@ def execute(args: list[str], shell_instance) -> None:
     if not args:
         print("[!] Usage: show <feature> [options]")
         print("    Example: show interfaces")
-        print("    Example: show interface errors")
+        print("    Example: show ip bgp")
         return
 
-    # Check if we have an active SSH session
-    if not shell_instance.active_host:
-        print("[!] Cannot run 'show': Not connected to a switch.")
-        print("    Hint: Use 'connect <host>' first.")
+    # Check if we have active SSH sessions in the pool
+    if not shell_instance.pool.has_active_sessions:
+        print("[!] Cannot run 'show': Not connected to any switches.")
+        print("    Hint: Use 'connect <target-expr>' first.")
         return
 
-    # Convert the user's arguments into the yaml key format
-    # e.g., "show interface errors" -> "show_interface_errors"
     command_key = f"show_{'_'.join(args)}"
     raw_fallback_cmd = f"show {' '.join(args)}"
-    title_context = f"Show {' '.join(args).title()} on {shell_instance.active_host}"
+    
+    # Format a nice title context based on how many hosts we are querying
+    hosts = shell_instance.pool.active_hostnames
+    host_context = f"{len(hosts)} host(s)" if len(hosts) > 2 else ", ".join(hosts)
+    title_context = f"Show {' '.join(args).title()} across {host_context}"
 
     try:
         # 1. Command Resolution
@@ -42,30 +44,52 @@ def execute(args: list[str], shell_instance) -> None:
             parse_strategy = mapped_cmd.parse_strategy
             
         except CommandNotFoundError:
-            # Pass-Through Mode
-            print(f"[*] '{command_key}' not mapped in config. Passing raw command to switch...")
+            # --- Pass-Through Mode ---
+            print(f"[*] '{command_key}' not mapped in config. Passing raw command...")
             native_commands = [raw_fallback_cmd]
-            parse_strategy = "raw"  # Force raw text output
+            parse_strategy = "raw"  
             
-        # Log the execution to the background audit file
         audit_logger.info(
-            f"Executing '{command_key}' on '{shell_instance.active_host}'. "
+            f"Executing '{command_key}' across {len(hosts)} hosts. "
             f"Native commands: {native_commands}"
         )
         
-        # 2. Execution via Netmiko
-        print(f"[*] Fetching data from {shell_instance.active_host}...")
-        raw_outputs = shell_instance.conn_manager.send_commands(native_commands)
+        # 2. Fan-Out Execution via Session Pool
+        print(f"[*] Fetching data concurrently from {host_context}...")
+        # Returns: { "leaf01": {"show clock": "...", ...}, "leaf02": {...} }
+        raw_multi_outputs = shell_instance.pool.send_commands_all(native_commands)
         
-        # 3. Parsing (TextFSM or Raw)
-        parsed_data = shell_instance.parser.parse_multiple(raw_outputs, parse_strategy)
+        # 3. Parsing (per-switch)
+        parsed_results = {}
+        raw_flattened = {}
         
-        # 4. Rendering (Rich Tables or Raw Panel)
-        # We don't run the diagnostics engine here; 'show' is just for displaying data.
-        shell_instance.renderer.display_results(
-            parsed_data=parsed_data, 
-            title=title_context
-        )
+        for hostname, raw_dict in raw_multi_outputs.items():
+            # Flatten the dict values into a single string for raw rendering fallback
+            combined_raw = "\n".join(raw_dict.values())
+            raw_flattened[hostname] = combined_raw
+            
+            if parse_strategy != "raw":
+                try:
+                    parsed_results[hostname] = shell_instance.parser.parse_multiple(raw_dict, parse_strategy)
+                except Exception as e:
+                    audit_logger.warning(f"Parsing failed for {hostname}: {e}")
+                    # If TextFSM fails on one switch, inject a dummy row so the user sees the error
+                    parsed_results[hostname] = [{"PARSE_ERROR": str(e)}]
+        
+        # 4. Aggregation & Rendering
+        if parse_strategy == "raw":
+            # The Renderer's display_raw_multi expects a Dict[str, str] mapping hostname -> text
+            shell_instance.renderer.display_results(
+                parsed_data=raw_flattened, 
+                title=title_context
+            )
+        else:
+            # The Aggregator combines { "hostA": [row1], "hostB": [row2] } into one big table list
+            aggregated_data = shell_instance.aggregator.aggregate_vertical(parsed_results)
+            shell_instance.renderer.display_results(
+                parsed_data=aggregated_data, 
+                title=title_context
+            )
         
     except Exception as e:
         print(f"[!] Error executing 'show': {e}")

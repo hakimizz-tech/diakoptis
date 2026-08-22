@@ -1,12 +1,12 @@
 """
-Command Map configuration loader.
+Command Map configuration loader (v2).
 Parses, validates, and stores the friendly-to-native command mappings.
 """
 
 import yaml
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
 
 class CommandMapError(Exception):
@@ -25,12 +25,12 @@ class CommandDefinition:
 
 
 class CommandMap:
-    def __init__(self, filepath: str = "config/command_map.yaml"):
+    def __init__(self, filepath: Union[str, Path] = "config/command_map/asterfusion.yaml"):
         """
         Initializes the command map by loading and parsing the YAML file.
         
         Args:
-            filepath: Path to the command_map.yaml file.
+            filepath: Path to the vendor-specific command map YAML file.
         """
         self.filepath = Path(filepath)
         self.commands: Dict[str, CommandDefinition] = {}
@@ -44,7 +44,7 @@ class CommandMap:
         if not self.filepath.exists():
             raise CommandMapError(
                 f"Command map file not found at {self.filepath}. "
-                "Ensure config/command_map.yaml exists."
+                "Ensure your config/command_map/ directory contains the correct vendor YAML."
             )
 
         try:
@@ -65,7 +65,9 @@ class CommandMap:
             if isinstance(native_cmds, str):
                 native_cmds = [native_cmds]
 
-            # Construct the dataclass
+            # Construct the dataclass. 
+            # Note: Parameterized targets like {target} remain as raw strings here.
+            # The CommandResolver handles injecting the actual target values later.
             self.commands[cmd_key] = CommandDefinition(
                 description=cmd_data.get("description", "No description provided."),
                 native=native_cmds,
@@ -74,7 +76,7 @@ class CommandMap:
 
     def get_command(self, command_key: str) -> Optional[CommandDefinition]:
         """
-        Retrieves a validated command definition by its key (e.g., 'show_interfaces').
+        Retrieves a validated command definition by its key (e.g., 'check_interfaces').
         
         Args:
             command_key: The friendly command name.

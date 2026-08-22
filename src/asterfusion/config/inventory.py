@@ -1,12 +1,13 @@
 """
-Inventory configuration loader.
-Parses inventory.yaml, flattens host inheritance, and resolves environment variables.
+Inventory configuration loader (v2).
+Parses inventory.yaml and provides data access methods for the 
+TargetParser, SessionPool, and CredentialManager.
 """
 
-import os
 import yaml
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
+
 
 class InventoryError(Exception):
     """Custom exception for inventory loading errors."""
@@ -22,26 +23,16 @@ class Inventory:
             filepath: Path to the inventory.yaml file.
         """
         self.filepath = Path(filepath)
-        self.hosts: Dict[str, Dict[str, Any]] = {}
         
-        self._load_and_flatten()
+        # Internal data stores mapping to the v2 YAML schema
+        self._switches: Dict[str, Dict[str, Any]] = {}
+        self._groups: Dict[str, List[str]] = {}
+        self._profiles: Dict[str, Dict[str, str]] = {}
+        
+        self._load_config()
 
-    def _resolve_env_vars(self, value: Any) -> Any:
-        """
-        Checks if a string value is an environment variable reference (starts with 'ENV:').
-        If so, fetches it from os.environ. Otherwise, returns the value as-is.
-        """
-        if isinstance(value, str) and value.startswith("ENV:"):
-            env_key = value.split("ENV:", 1)[1].strip()
-            # Return the env var, or an empty string if it's not set
-            return os.getenv(env_key, "")
-        return value
-
-    def _load_and_flatten(self) -> None:
-        """
-        Loads the YAML file and flattens the defaults -> groups -> hosts hierarchy
-        into a single flat dictionary of hosts.
-        """
+    def _load_config(self) -> None:
+        """Loads the flat YAML file into memory."""
         if not self.filepath.exists():
             raise InventoryError(
                 f"Inventory file not found at {self.filepath}. "
@@ -54,48 +45,47 @@ class Inventory:
         except yaml.YAMLError as e:
             raise InventoryError(f"Failed to parse YAML in {self.filepath}: {e}")
 
-        defaults = data.get("defaults", {})
-        groups = data.get("groups", {})
+        # The v2 schema uses 'switches' instead of 'hosts'
+        self._switches = data.get("switches", {})
+        self._groups = data.get("groups", {})
+        self._profiles = data.get("credential_profiles", {})
 
-        # Iterate through groups and flatten the inheritance tree
-        for group_name, group_data in groups.items():
-            if not group_data:
-                continue
-                
-            # Extract group-level variables (everything except the 'hosts' dictionary)
-            group_vars = {k: v for k, v in group_data.items() if k != "hosts"}
-            group_hosts = group_data.get("hosts", {})
+        if not self._switches:
+            raise InventoryError(f"No 'switches' defined in {self.filepath}.")
 
-            for host_name, host_data in group_hosts.items():
-                if not host_data:
-                    host_data = {}
+    # Data Access Methods used by the CLI components
 
-                # Merge dictionaries. Order of precedence (lowest to highest):
-                # 1. Global defaults
-                # 2. Group overrides
-                # 3. Host-specific overrides
-                merged_host = {**defaults, **group_vars, **host_data}
-                
-                # Resolve any ENV: variable references securely
-                resolved_host = {
-                    k: self._resolve_env_vars(v) 
-                    for k, v in merged_host.items()
-                }
-                
-                self.hosts[host_name] = resolved_host
-
-    def get_host(self, target_name: str) -> Optional[Dict[str, Any]]:
+    def get_host(self, target_name: str) -> Dict[str, Any]:
         """
-        Retrieves the fully resolved connection dictionary for a specific host.
+        Retrieves the configuration dictionary for a specific switch.
         
         Args:
-            target_name: The name of the host (e.g., 'lab-leaf01').
+            target_name: The name of the switch (e.g., 'switch1').
             
         Returns:
-            A dictionary of connection parameters, or None if the host isn't found.
+            A dictionary of host attributes.
+            
+        Raises:
+            InventoryError: If the switch is not found.
         """
-        return self.hosts.get(target_name)
+        if target_name not in self._switches:
+            raise InventoryError(f"Switch '{target_name}' not found in inventory.")
+        return self._switches[target_name]
 
-    def list_hosts(self) -> list[str]:
-        """Returns a list of all configured hostnames."""
-        return list(self.hosts.keys())
+    def list_hosts(self) -> List[str]:
+        """Returns a list of all configured switch names."""
+        return list(self._switches.keys())
+
+    def get_group(self, group_name: str) -> Optional[List[str]]:
+        """
+        Retrieves the list of switch names belonging to a curated group.
+        Used by the TargetParser to resolve queries like '@core_uplinks'.
+        """
+        return self._groups.get(group_name)
+
+    def get_profiles(self) -> Dict[str, Dict[str, str]]:
+        """
+        Retrieves the dictionary of credential profiles.
+        Used by the CredentialManager to resolve secure environment variables.
+        """
+        return self._profiles

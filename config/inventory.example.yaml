@@ -1,0 +1,71 @@
+# inventory.yaml.example
+#
+# Copy to inventory.yaml and fill in real hosts. Never commit inventory.yaml with
+# real hostnames/credentials if this repo is shared — only credential_profiles
+# (env var *names*, not secrets) belong here.
+#
+# Two ways to target multiple switches at once (see plan §5):
+#   - Attribute tags below (site/role/environment) -> connect @role:leaf
+#   - The optional `groups:` block                -> connect @core_uplinks
+# Both can be combined: connect @role:leaf&@site:nairobi
+
+credential_profiles:
+  default:
+    username_env: ASTER_DEFAULT_USER
+    password_env: ASTER_DEFAULT_PASS
+  leaf_admin:
+    username_env: LEAF_ADMIN_USER
+    password_env: LEAF_ADMIN_PASS
+
+# Hand-curated sets that don't correspond to a single site/role/environment value.
+# Optional — most day-to-day targeting should use the attribute tags on each switch.
+groups:
+  core_uplinks:
+    - switch1
+    - switch4
+  friday_maintenance:
+    - switch3
+
+switches:
+  switch1:
+    host: 10.0.0.11
+    vendor: asterfusion
+    device_type: asterfusion_asternos
+    credential_profile: default
+    site: nairobi
+    role: spine
+    environment: prod
+
+  switch2:
+    host: 10.0.0.12
+    vendor: asterfusion
+    device_type: asterfusion_asternos
+    credential_profile: default
+    site: nairobi
+    role: leaf
+    environment: prod
+
+  switch3:
+    host: 10.0.0.13
+    vendor: asterfusion
+    device_type: asterfusion_asternos
+    credential_profile: leaf_admin   # different login than switch1/switch2
+    site: mombasa
+    role: leaf
+    environment: staging
+
+  switch4:
+    host: 10.0.0.14
+    vendor: asterfusion
+    device_type: asterfusion_asternos
+    credential_profile: default
+    site: mombasa
+    role: spine
+    environment: staging
+
+# Example targeting once this loads:
+#   connect switch1,switch2          -> explicit list
+#   connect @site:nairobi            -> switch1, switch2
+#   connect @role:leaf               -> switch2, switch3
+#   connect @role:leaf&@site:mombasa -> switch3 only
+#   connect @core_uplinks            -> switch1, switch4

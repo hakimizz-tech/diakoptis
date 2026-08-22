@@ -1,0 +1,23 @@
+Value TOTAL_MEM (\d+)
+Value USED_MEM (\d+)
+Value FREE_MEM (\d+)
+Value SHARED_MEM (\d+)
+Value BUFF_CACHE_MEM (\d+)
+Value AVAILABLE_MEM (\d+)
+Value TOTAL_SWAP (\d+)
+Value USED_SWAP (\d+)
+Value FREE_SWAP (\d+)
+
+Start
+  # Safely ignore the header row
+  ^\s+total\s+used\s+free.*$$ -> Continue
+  
+  # Match the main Memory row. The available column is made optional 
+  # with (?:...)? to ensure compatibility with older Debian procps versions.
+  ^Mem:\s+${TOTAL_MEM}\s+${USED_MEM}\s+${FREE_MEM}\s+${SHARED_MEM}\s+${BUFF_CACHE_MEM}(?:\s+${AVAILABLE_MEM})?
+  
+  # Match the Swap row and trigger the Record action
+  ^Swap:\s+${TOTAL_SWAP}\s+${USED_SWAP}\s+${FREE_SWAP} -> Record
+  
+  # Drop empty lines
+  ^\s*$$

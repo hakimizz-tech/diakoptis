@@ -1,10 +1,11 @@
 """
-Check command handler.
-Translates user 'check ...' input into parameterized diagnostic commands.
+Check command handler (v2).
+Executes automated diagnostic playbooks concurrently across all active switches.
+Pivots the resulting data into a multi-switch comparison table.
 """
 
 from asterfusion.logging.session_log import audit_logger
-from asterfusion.resolver.resolver import CommandNotFoundError, MissingArgumentError
+from asterfusion.resolver.resolver import CommandNotFoundError
 
 
 def execute(args: list[str], shell_instance) -> None:
@@ -12,74 +13,107 @@ def execute(args: list[str], shell_instance) -> None:
     Executes the 'check' command group.
     
     Args:
-        args: List of string arguments provided by the user (e.g., ['interface', 'Ethernet0']).
+        args: List of string arguments (e.g., ['interfaces', 'Ethernet4', '--diff']).
         shell_instance: The AsterfusionCLI instance.
     """
     if not args:
-        print("[!] Usage: check <feature> [target]")
-        print("    Example: check bgp")
-        print("    Example: check interface Ethernet4")
-        print("    Example: check bgp neighbor 10.0.0.1")
+        print("[!] Usage: check <feature> [target] [--diff]")
+        print("    Example: check interfaces")
+        print("    Example: check interfaces Ethernet4")
+        print("    Example: check bgp --diff")
         return
 
-    # Check if we have an active SSH session
-    if not shell_instance.active_host:
-        print("[!] Cannot run 'check': Not connected to a switch.")
-        print("    Hint: Use 'connect <host>' first.")
+    if not shell_instance.pool.has_active_sessions:
+        print("[!] Cannot run 'check': Not connected to any switches.")
         return
 
-    # --- Parameterized Command Resolution ---
-    # We need to figure out which part of the input is the command name
-    # and which part is the dynamic variable. 
-    if len(args) == 1:
-        # e.g., "check vlan" -> key: "check_vlan", args: {}
-        command_key = f"check_{args[0]}"
-        cmd_kwargs = {}
-    elif args[0] == "bgp" and args[1] == "neighbor" and len(args) == 3:
-        # e.g., "check bgp neighbor 10.0.0.1" -> key: "check_bgp_neighbor", args: {neighbor_ip: ...}
-        command_key = "check_bgp_neighbor"
-        cmd_kwargs = {"neighbor_ip": args[2]}
-    else:
-        # e.g., "check interface Ethernet4" -> key: "check_interface", args: {target: ...}
-        # Joins everything except the last arg as the command key
-        command_key = f"check_{'_'.join(args[:-1])}"
-        cmd_kwargs = {"target": args[-1]}
+    # 1. Parse CLI Arguments
+    diff_only = "--diff" in args
+    clean_args = [arg for arg in args if arg != "--diff"]
+    
+    feature = clean_args[0].lower()
+    target = clean_args[1] if len(clean_args) > 1 else None
+    
+    command_key = f"check_{feature}"
+    
+    # Determine the primary key for the Comparison Aggregator matrix
+    # (In a larger app, this mapping could live in the command_map.yaml)
+    primary_key_map = {
+        "check_interface": "INTERFACE",
+        "check_interfaces": "INTERFACE",
+        "check_bgp": "NEIGHBOR",
+        "check_bgp_neighbor": "NEIGHBOR",
+    }
+    primary_key = primary_key_map.get(command_key)
+
+    hosts = shell_instance.pool.active_hostnames
+    host_context = f"{len(hosts)} host(s)" if len(hosts) > 2 else ", ".join(hosts)
+    title_context = f"Diagnostic: {feature.title()} across {host_context}"
 
     try:
-        # 1. Intent Translation (Resolver)
-        # This handles injecting the cmd_kwargs into the native strings internally
-        mapped_cmd = shell_instance.resolver.resolve(command_key, **cmd_kwargs)
-        
-        # Log the intent to the background audit file
-        audit_logger.info(
-            f"Executing '{command_key}' on '{shell_instance.active_host}'. "
-            f"Native commands: {mapped_cmd.native_commands}"
-        )
-        
-        # 2. Execution (Netmiko)
-        # Provide a small loading indicator for the user since network calls block
-        print(f"[*] Fetching data from {shell_instance.active_host}...")
-        raw_outputs = shell_instance.conn_manager.send_commands(mapped_cmd.native_commands)
-        
-        # 3. Data Extraction (TextFSM)
-        parsed_data = shell_instance.parser.parse_multiple(raw_outputs, mapped_cmd.parse_strategy)
-        
-        # 4. Expert Analysis (Diagnostics Engine)
-        findings = shell_instance.diagnostics.analyze(command_key, parsed_data, **cmd_kwargs)
-        
-        # 5. Presentation (Rich Renderer)
-        title_context = f"{command_key.replace('_', ' ').title()} on {shell_instance.active_host}"
+        # 2. Command Resolution 
+        try:
+            # We pass the optional 'target' keyword argument so the Resolver 
+            # can inject it into native commands like 'show interface {target}'
+            mapped_cmd = shell_instance.resolver.resolve(command_key, target=target)
+        except CommandNotFoundError:
+            print(f"[!] Diagnostics Error: '{command_key}' is not a registered check command.")
+            return
+
+        if mapped_cmd.parse_strategy == "raw":
+            print("[!] Diagnostics Error: Cannot run playbooks against 'raw' unparsed text.")
+            return
+
+        audit_logger.info(f"Running diagnostics '{command_key}' across {len(hosts)} hosts.")
+        print(f"[*] Analyzing '{feature}' across {host_context}...")
+
+        # --- 3. Fan-Out Execution ---
+        raw_multi_outputs = shell_instance.pool.send_commands_all(mapped_cmd.native_commands)
+
+        # 4. Parse Data & Run Diagnostics (Per-Switch) 
+        parsed_results = {}
+        all_findings = []
+
+        for hostname, raw_dict in raw_multi_outputs.items():
+            try:
+                # Parse
+                parsed_data = shell_instance.parser.parse_multiple(raw_dict, mapped_cmd.parse_strategy)
+                parsed_results[hostname] = parsed_data
+                
+                # Diagnose
+                findings = shell_instance.diagnostics.analyze(command_key, parsed_data, target=target)
+                
+                # Tag the findings with the host they came from so the Renderer can label them
+                for finding in findings:
+                    finding.context['host'] = hostname
+                all_findings.extend(findings)
+                
+            except Exception as e:
+                audit_logger.error(f"Diagnostics failed for {hostname}: {e}")
+                parsed_results[hostname] = [{"PARSE_ERROR": str(e)}]
+
+        # 5. Aggregation 
+        if primary_key:
+            # Pivot the data into a multi-column comparison matrix
+            aggregated_data = shell_instance.aggregator.aggregate_comparison(
+                parsed_results, 
+                primary_key=primary_key, 
+                diff_only=diff_only
+            )
+        else:
+            # Fallback to standard vertical stacking if we don't know how to pivot this feature
+            aggregated_data = shell_instance.aggregator.aggregate_vertical(parsed_results)
+
+        # --- 6. Rendering ---
+        if diff_only and not aggregated_data:
+            print(f"[+] All {len(hosts)} switches are in identical states (No diffs found).")
+            
         shell_instance.renderer.display_results(
-            parsed_data=parsed_data, 
-            findings=findings, 
+            parsed_data=aggregated_data, 
+            findings=all_findings, 
             title=title_context
         )
-            
-    except CommandNotFoundError:
-        print(f"[!] Unmapped check command: '{command_key}'.")
-        print("    If this is a valid command, please add it to config/command_map.yaml.")
-    except MissingArgumentError as e:
-        print(f"[!] Syntax Error: {e}")
+
     except Exception as e:
-        print(f"[!] Error executing '{command_key}': {e}")
+        print(f"[!] Error executing 'check': {e}")
         audit_logger.error(f"Error during '{command_key}' execution: {e}")

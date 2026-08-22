@@ -1,7 +1,7 @@
 # Asterfusion Troubleshooting CLI — Design Plan
 
 **Status:** Draft
-**Owner:**
+**Owner:** hakeem <joshuakim408@gmail.com>
 **Date:** 2026-08-21
 
 ---

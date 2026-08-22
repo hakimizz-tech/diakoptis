@@ -1,5 +1,5 @@
 """
-Application settings and environment variable resolution.
+Application settings and environment variable resolution (v2).
 Follows 12-factor app principles by keeping config in the environment.
 """
 
@@ -9,7 +9,9 @@ from pathlib import Path
 
 try:
     from dotenv import load_dotenv
-    load_dotenv()  # Auto-loads variables from a local .env file if it exists
+    # Auto-loads variables from a local .env file if it exists.
+    # Crucial for local dev to source credentials and paths safely.
+    load_dotenv()  
 except ImportError:
     pass  # In production, we assume variables are injected by the OS/Container
 
@@ -19,6 +21,10 @@ class Settings:
     # File Paths
     inventory_path: Path
     command_map_path: Path
+    
+    # Concurrency & Connections (v2)
+    max_concurrent_sessions: int
+    ssh_timeout: int
     
     # Logging & Debug
     log_level: str
@@ -37,8 +43,23 @@ def _load_settings() -> Settings:
     Provides sane default values if environment variables are not set.
     """
     return Settings(
-        inventory_path=Path(os.getenv("ASTER_CLI_INVENTORY_PATH", "config/inventory.yaml")),
-        command_map_path=Path(os.getenv("ASTER_CLI_COMMAND_MAP_PATH", "config/command_map.yaml")),
+        # File paths updated to match the v2 folder structure
+        inventory_path=Path(
+            os.getenv("ASTER_CLI_INVENTORY_PATH", "config/inventory.yaml")
+        ),
+        command_map_path=Path(
+            os.getenv("ASTER_CLI_COMMAND_MAP_PATH", "config/command_map/asterfusion.yaml")
+        ),
+        
+        # Concurrency controls for the SessionPool
+        max_concurrent_sessions=int(
+            os.getenv("ASTER_CLI_MAX_CONCURRENT", "20")
+        ),
+        ssh_timeout=int(
+            os.getenv("ASTER_CLI_SSH_TIMEOUT", "15")
+        ),
+        
+        # Logging & Debug
         log_level=os.getenv("ASTER_CLI_LOG_LEVEL", "INFO").upper(),
         log_dir=Path(os.getenv("ASTER_CLI_LOG_DIR", "logs/")),
         netmiko_debug=_parse_bool(os.getenv("ASTER_CLI_NETMIKO_DEBUG", "False"))
