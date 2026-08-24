@@ -28,8 +28,8 @@ from asterfusion.logging.session_log import audit_logger
 #  Import the command handlers 
 from asterfusion.cli.commands import connect, show, check
 
-# Import Diagnostic Playbooks 
-from asterfusion.diagnostics.playbooks import environment_health, interface_health, bgp_health
+# Import Diagnostic Playbooks
+from asterfusion.diagnostics.playbooks import register_playbooks
 
 
 class AsterfusionCLI:
@@ -50,12 +50,8 @@ class AsterfusionCLI:
             
             # 3. Initialize Diagnostics & Register Playbooks
             self.diagnostics = DiagnosticsEngine()
+            register_playbooks(self.diagnostics)
             
-            self.diagnostics.register_playbook("check_interface", interface_health.analyze)
-            self.diagnostics.register_playbook("check_interfaces", interface_health.analyze)
-            self.diagnostics.register_playbook("check_bgp", bgp_health.analyze)
-            self.diagnostics.register_playbook("check_bgp_neighbor", bgp_health.analyze)
-            self.diagnostics.register_playbook("check_environment", environment_health.analyze)
             
         except (InventoryError, CommandMapError) as e:
             print(f"\n[!] Startup Error: {e}")

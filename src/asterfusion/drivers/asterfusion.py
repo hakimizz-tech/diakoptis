@@ -57,7 +57,8 @@ class AsterfusionDriver(SwitchDriver):
             connection_params["secret"] = secret
 
         try:
-            self.netmiko_conn = ConnectHandler(**connection_params)
+            self.netmiko_conn = ConnectHandler(auto_connect=False, **connection_params)
+            self.netmiko_conn._open()
             
             # Optional: If your AsterNOS switches drop you into bash instead of the CLI, 
             # you would handle that transition here (e.g., self.netmiko_conn.send_command("sonic-cli")).

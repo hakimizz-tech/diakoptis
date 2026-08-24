@@ -25,14 +25,15 @@
 # Native commands below are illustrative — verify exact sonic-cli syntax against
 # docs.asternos.com or `?` / Tab-completion on real hardware before relying on them.
 
+#TODO:update the check_environment to check_powers to suppoer Asterfusion
 check_environment:
   description: "Check system hardware health (Fans, Power Supplies, Temperature)"
-  native: ["show environment"]
+  native: ["show environment all"]
   parse: "textfsm:asterfusion/sonic_show_environment.textfsm"
 
 check_optics:
   description: "Show optical transceiver DOM/DDM levels (Tx/Rx power) for all ports"
-  native: ["show interface transceiver"]
+  native: ["show interface transceiver lpmode"]
   parse: "ntc:cisco_ios:show interface transceiver"
 
 check_optics_port:
@@ -55,12 +56,12 @@ check_interface_errors:
 check_lag:
   description: "Verify Port-Channel / LACP bundle status"
   native: ["show portchannel summary"]
-  parse: "ntc:cisco_ios:show portchannel summary"
+  parse: "raw"
 
 show_lldp:
   description: "Show connected neighbors via LLDP"
   native: ["show lldp neighbors"]
-  parse: "ntc:cisco_ios:show lldp neighbors"
+  parse: "raw"
 
 show_mac:
   description: "Show MAC address table"
@@ -76,7 +77,7 @@ show_vlan:
 show_arp:
   description: "Show the ARP cache (IP to MAC mapping)"
   native: ["show arp"]
-  parse: "ntc:cisco_ios:show arp"
+  parse: "raw"
 
 show_route:
   description: "Show the global routing table"
@@ -96,14 +97,22 @@ check_bgp_neighbor:
 
 # System / Admin (CPU, Memory, Logs)
 check_cpu:
-  description: "Check CPU utilization and active processes"
-  native: ["show processes cpu"]
-  parse: "ntc:cisco_ios:show processes cpu"
+  description: "Check system CPU utilization"
+  native: 
+    - "show system cpu-usage"
+  parse: "textfsm:asterfusion/sonic_show_system_cpu_usage.textfsm"
 
 check_memory:
   description: "Check system RAM utilization"
-  native: ["show memory"]
-  parse: "textfsm:asterfusion/sonic_show_memory.textfsm"
+  native: 
+    - "show system memory-usage"
+  parse: "textfsm:asterfusion/sonic_show_system_memory_usage.textfsm"
+
+check_disk:
+  description: "Check system Disk utilization"
+  native: 
+    - "show system disk-usage"
+  parse: "textfsm:asterfusion/sonic_show_system_disk_usage.textfsm"
 
 show_logs:
   description: "Show recent system syslog messages"

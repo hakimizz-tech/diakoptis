@@ -67,10 +67,10 @@ def execute(args: list[str], shell_instance) -> None:
         audit_logger.info(f"Running diagnostics '{command_key}' across {len(hosts)} hosts.")
         print(f"[*] Analyzing '{feature}' across {host_context}...")
 
-        # --- 3. Fan-Out Execution ---
+        #  Fan-Out Execution 
         raw_multi_outputs = shell_instance.pool.send_commands_all(mapped_cmd.native_commands)
 
-        # 4. Parse Data & Run Diagnostics (Per-Switch) 
+        # Parse Data & Run Diagnostics (Per-Switch) 
         parsed_results = {}
         all_findings = []
 
@@ -92,7 +92,7 @@ def execute(args: list[str], shell_instance) -> None:
                 audit_logger.error(f"Diagnostics failed for {hostname}: {e}")
                 parsed_results[hostname] = [{"PARSE_ERROR": str(e)}]
 
-        # 5. Aggregation 
+        # Aggregation 
         if primary_key:
             # Pivot the data into a multi-column comparison matrix
             aggregated_data = shell_instance.aggregator.aggregate_comparison(
@@ -104,7 +104,7 @@ def execute(args: list[str], shell_instance) -> None:
             # Fallback to standard vertical stacking if we don't know how to pivot this feature
             aggregated_data = shell_instance.aggregator.aggregate_vertical(parsed_results)
 
-        # --- 6. Rendering ---
+        # Rendering 
         if diff_only and not aggregated_data:
             print(f"[+] All {len(hosts)} switches are in identical states (No diffs found).")
             

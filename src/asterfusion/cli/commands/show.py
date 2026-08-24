@@ -44,7 +44,7 @@ def execute(args: list[str], shell_instance) -> None:
             parse_strategy = mapped_cmd.parse_strategy
             
         except CommandNotFoundError:
-            # --- Pass-Through Mode ---
+            # Pass-Through Mode 
             print(f"[*] '{command_key}' not mapped in config. Passing raw command...")
             native_commands = [raw_fallback_cmd]
             parse_strategy = "raw"  

@@ -5,8 +5,10 @@ Analyzes Layer 1 hardware sensors: Fans, Power Supplies, and Temperatures.
 
 from typing import List, Dict, Any
 from asterfusion.diagnostics.engine import DiagnosticFinding, Severity
+from asterfusion.diagnostics.playbooks.registry import playbook
 
 
+@playbook("check_environment")
 def analyze(data: List[Dict[str, Any]], target: str|None = None, **kwargs) -> List[DiagnosticFinding]:
     """
     Analyzes environmental sensor data.

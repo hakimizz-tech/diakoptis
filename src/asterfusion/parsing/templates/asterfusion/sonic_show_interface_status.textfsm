@@ -1,24 +1,15 @@
-Value INTERFACE (\S+)
+Value Required INTERFACE (\S+)
 Value LANES (\S+)
 Value SPEED (\S+)
 Value MTU (\d+)
 Value FEC (\S+)
 Value ALIAS (\S+)
-Value VLAN (\S+)
 Value OPER_STATUS (\S+)
 Value ADMIN_STATUS (\S+)
-Value TYPE (.*)
+Value OPTICAL_TYPE (\S+)
+Value ASYM_PFC (\S+)
+Value IF_TYPE (\S+)
 
 Start
-  # 1. Match the exact header row. Once matched, move to the 'Interfaces' parsing state.
-  ^Interface\s+Lanes\s+Speed\s+MTU\s+FEC\s+Alias\s+Vlan\s+Oper\s+Admin\s+Type -> Interfaces
-
-Interfaces
-  # 2. Skip the dashed separator line (e.g., ----------- -------- -------)
-  ^-+\s+-+.*$$ -> Continue
-  
-  # 3. Match the actual data rows and record them into a dictionary
-  ^${INTERFACE}\s+${LANES}\s+${SPEED}\s+${MTU}\s+${FEC}\s+${ALIAS}\s+${VLAN}\s+${OPER_STATUS}\s+${ADMIN_STATUS}\s+${TYPE}$$ -> Record
-  
-  # 4. Safely drop empty lines at the end of the output
-  ^\s*$$
+  # Match the row, allowing for leading spaces, and make IF_TYPE optional at the end
+  ^\s*${INTERFACE}\s+${LANES}\s+${SPEED}\s+${MTU}\s+${FEC}\s+${ALIAS}\s+${OPER_STATUS}\s+${ADMIN_STATUS}\s+${OPTICAL_TYPE}\s+${ASYM_PFC}(?:\s+${IF_TYPE})?\s*$$ -> Record

@@ -89,3 +89,6 @@ class Inventory:
         Used by the CredentialManager to resolve secure environment variables.
         """
         return self._profiles
+
+    def __repr__(self) -> str:
+        return f"Inventory has<{', '.join(self.list_hosts())}>"

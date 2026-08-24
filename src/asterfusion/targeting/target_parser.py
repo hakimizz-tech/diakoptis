@@ -39,7 +39,7 @@ class TargetParser:
         if not expression or not expression.strip():
             raise TargetParseError("Target expression cannot be empty.")
 
-        # 1. Split by comma to handle the Union (OR) of multiple targets
+        # Split by comma to handle the Union (OR) of multiple targets e.g switch1,switch2 
         tokens = [t.strip() for t in expression.split(",")]
         final_hosts: Set[str] = set()
 

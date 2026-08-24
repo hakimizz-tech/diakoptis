@@ -31,7 +31,7 @@ def execute(args: list[str], shell_instance) -> None:
 
     # 1. Parse the target expression into a deduplicated list of hostnames
     try:
-        targets = shell_instance.target_parser.parse(expression)
+        targets : list[str] = shell_instance.target_parser.parse(expression)
     except TargetParseError as e:
         print(f"[!] Target Error: {e}")
         # Provide a helpful hint of what IS available if it's a simple, single-host typo
@@ -40,7 +40,7 @@ def execute(args: list[str], shell_instance) -> None:
             print(f"    Available hosts: {available}...")
         return
 
-    print(f"[*] Resolving credentials and connecting to {len(targets)} host(s)...")
+    print(f"[*] Resolving credentials and connecting to {len(targets)} host{'s' if len(targets) > 1 else None}...")
     
     # 2. Initiate concurrent connections via the Session Pool
     # connect_all returns a dict mapping hostname -> error message (or None if success)

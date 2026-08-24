@@ -1,80 +1,26 @@
-Value COMPONENT ([\w\s\-\.]+(?<!\s))
+Value Required COMPONENT (\S+(?:\s+\d+)?)
+Value STATUS (OK|NOT OK|Absent|ALARM|CRIT|Normal|-)
+Value VALUE ([+-]?\d+(?:\.\d+)?(?:%|C|V|A|W|RPM)?)
 Value TYPE (Fan|Temperature|PSU|Sensor)
-Value VALUE ([\-\+\d\.]+[%CVAW]?)
-Value STATUS (OK|NOT OK|Absent|ALARM|CRIT|Normal|\-)
 
 Start
-  # ==========================================
-  # 1. Catch Enterprise Tabulated Formats
-  # ==========================================
-  
-  # Detect Fan Table Header
-  ^Fan\s+Status\s+Speed -> FanSection
-  
-  # Detect Temperature Table Header
-  ^Temperature\s+Value -> TempSection
-  
-  # Detect PSU Table Header
-  ^PSU\s+Status\s+VIN -> PSUSection
-
-  # ==========================================
-  # 2. Catch Community SONiC (Linux lm-sensors)
-  # ==========================================
-  
-  # Match Linux Fan: "fan1: 4285 RPM (min = 0 RPM)"
-  ^(?i)(fan\d+):\s+([\d\.]+)\s*RPM.*?(ALARM|CRIT)?
-  ^${COMPONENT}:\s+${VALUE}.*?(?:${STATUS})?$$ -> RecordFan
-  
-  # Match Linux Temp: "temp1: +32.0°C (high = +85.0°C)"
-  ^(?i)(temp\d+|core\s*\d+):\s+\+?([\d\.]+).*?C.*?(ALARM|CRIT)?
-  ^${COMPONENT}:\s+${VALUE}.*?(?:${STATUS})?$$ -> RecordTemp
-
-
-# --- Sub-States for Tabulated Data ---
+  ^Fan\s+Status\s+Speed\s*$$ -> FanSection
+  ^Temperature\s+Value.*$$ -> TemperatureSection
+  ^PSU\s+Status\s+VIN.*$$ -> PsuSection
+  ^${COMPONENT}\s+${STATUS}\s+${VALUE}.*$$ -> Record
+  ^\s*$$ -> Continue
 
 FanSection
-  # Match: "Fan 1    OK        65%     Front-to-Back"
-  ^${COMPONENT}\s+${STATUS}\s+${VALUE}\s+.* -> RecordFanTabular
-  # Exit section on empty line
+  ^-+.*$$ -> Continue
+  ^${COMPONENT}\s+${STATUS}\s+${VALUE}.*$$ -> Record
   ^\s*$$ -> Start
 
-TempSection
-  # Match: "ASIC      45.0 C   105.0 C"
-  ^${COMPONENT}\s+${VALUE}\s+.* -> RecordTempTabular
+TemperatureSection
+  ^-+.*$$ -> Continue
+  ^${COMPONENT}\s+${VALUE}.*$$ -> Record
   ^\s*$$ -> Start
 
-PSUSection
-  # Match: "PSU 1    OK        220.1V  12.1V"
-  ^${COMPONENT}\s+${STATUS}\s+${VALUE}\s+.* -> RecordPSUTabular
+PsuSection
+  ^-+.*$$ -> Continue
+  ^${COMPONENT}\s+${STATUS}\s+${VALUE}.*$$ -> Record
   ^\s*$$ -> Start
-
-
-# --- Record Actions to inject the TYPE dynamically ---
-
-RecordFan
-  # Inject the hardcoded type and execute record
-  ^.* -> Let TYPE="Fan"
-  ^.* -> Record
-  ^.* -> Start
-
-RecordTemp
-  ^.* -> Let TYPE="Temperature"
-  ^.* -> Record
-  ^.* -> Start
-
-RecordFanTabular
-  ^.* -> Let TYPE="Fan"
-  ^.* -> Record
-  ^.* -> FanSection
-
-RecordTempTabular
-  ^.* -> Let TYPE="Temperature"
-  # Default status to OK if the table doesn't provide one
-  ^.* -> Let STATUS="OK" 
-  ^.* -> Record
-  ^.* -> TempSection
-
-RecordPSUTabular
-  ^.* -> Let TYPE="PSU"
-  ^.* -> Record
-  ^.* -> PSUSection
