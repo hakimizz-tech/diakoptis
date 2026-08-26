@@ -49,9 +49,10 @@ def get_driver(hostname: str, host_data: Dict[str, Any], credentials: Dict[str, 
         # return CiscoIOSDriver(hostname, host_data, credentials)
         raise UnsupportedVendorError("Cisco IOS support is planned but not yet implemented.")
         
-    elif vendor == "huawei_vrp":
-        # Placeholder for future expansion
-        raise UnsupportedVendorError("Huawei VRP support is planned but not yet implemented.")
+    elif vendor == "huawei_vrp" or vendor == 'huawei':
+        from asterfusion.drivers.huawei import HuaweiDriver
+        return HuaweiDriver(hostname, host_data, credentials)
+        # raise UnsupportedVendorError("Huawei VRP support is planned but not yet implemented.")
         
     else:
         raise UnsupportedVendorError(

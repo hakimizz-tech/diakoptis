@@ -1,0 +1,164 @@
+# config/command_map/huawei_vrp.yaml
+#
+# Vendor command map: Huawei (VRP)
+# Parsing strategy: ntc-templates ONLY — every entry below sets `parse: ntc`, no local
+# templates. Unlike asterfusion.yaml, this isn't a placeholder: ntc-templates' `huawei_vrp`
+# platform has real, confirmed coverage for most of these commands (verified directly
+# against ntc-templates' current template index, not assumed from memory).
+#
+# ntc_platform is NOT set per-entry here because it doesn't need to be: Netmiko's
+# device_type and ntc-templates' platform string are both literally "huawei_vrp" for this
+# vendor, so the driver just passes its own device_type straight through — see
+# drivers/huawei_vrp.py (plan.md §7). Contrast with Asterfusion, where no matching
+# ntc-templates platform exists at all yet.
+#
+# Coverage legend (checked against ntc-templates' live template index):
+#   CONFIRMED    -> a matching huawei_vrp_*.textfsm template exists; parse: ntc will
+#                   actually return structured data.
+#   NOT COVERED  -> no matching template exists yet; parse: ntc will gracefully degrade
+#                   to raw text (see parser.py) until ntc-templates adds one or a local
+#                   template is written under templates/huawei_vrp/.
+#
+# Friendly command names are kept identical to asterfusion.yaml wherever the same
+# functionality exists (show_interfaces, check_bgp, check_vlan, show_lldp_neighbors,
+# show_logs, show_version) — the whole point of the command map is that "check bgp" means
+# the same thing to the operator regardless of which switch answers it (plan.md §9).
+# Additional entries below are Huawei-specific, made possible by its stronger ntc coverage;
+# worth backporting to other vendors' maps once equivalent coverage exists for them too.
+#
+# description: is required on every entry — shell.py's _handle_help() reads
+# definition.description for every loaded command map entry regardless of vendor and will
+# error or print blank rows for any entry missing one.
+
+
+show_interfaces:
+  # CONFIRMED: huawei_vrp_display_interface_brief.textfsm
+  description: "Show general interface operational status"
+  native: ["display interface brief"]
+  parse: ntc
+
+show_interface_errors:
+  # CONFIRMED: huawei_vrp_display_interface.textfsm
+  # Note: unlike Asterfusion's dedicated "counters errors" view, VRP's full "display
+  # interface" output includes CRC/error counters inline — there's no separate
+  # errors-only command, so this friendly name maps to the fuller output on Huawei.
+  description: "Show detailed interface status and error counters (full 'display interface' output)"
+  native: ["display interface"]
+  parse: ntc
+
+check_eth_trunk:
+  # CONFIRMED: huawei_vrp_display_eth-trunk.textfsm
+  description: "Verify Eth-Trunk (LACP / link aggregation) bundle status"
+  native: ["display eth-trunk"]
+  parse: ntc
+
+
+check_bgp:
+  # CONFIRMED: huawei_vrp_display_bgp_peer.textfsm
+  description: "Check BGP peer state and prefix counts"
+  native: ["display bgp peer"]
+  parse: ntc
+
+check_ospf:
+  # NOT COVERED — no huawei_vrp OSPF peer template in ntc-templates today.
+  description: "Check OSPF neighbor/peer state"
+  native: ["display ospf peer"]
+  parse: ntc
+
+check_routing_table:
+  # CONFIRMED: huawei_vrp_display_ip_routing-table_verbose.textfsm
+  description: "Show the global IP routing table"
+  native: ["display ip routing-table verbose"]
+  parse: ntc
+
+check_ipv6_neighbors:
+  # CONFIRMED: huawei_vrp_display_ipv6_neighbors.textfsm
+  description: "Show the IPv6 neighbor (NDP) table"
+  native: ["display ipv6 neighbors"]
+  parse: ntc
+
+check_arp:
+  # CONFIRMED: huawei_vrp_display_arp_brief.textfsm
+  description: "Show the ARP cache (IP to MAC mapping)"
+  native: ["display arp brief"]
+  parse: ntc
+
+
+check_vlan:
+  # CONFIRMED: huawei_vrp_display_vlan_brief.textfsm
+  description: "Show VLAN configuration and member ports"
+  native: ["display vlan brief"]
+  parse: ntc
+
+show_port_vlan:
+  # CONFIRMED: huawei_vrp_display_port_vlan.textfsm
+  description: "Show per-port VLAN assignment"
+  native: ["display port vlan"]
+  parse: ntc
+
+check_mac_table:
+  # CONFIRMED: huawei_vrp_display_mac-address.textfsm
+  description: "Show the MAC address table"
+  native: ["display mac-address"]
+  parse: ntc
+
+show_lldp_neighbors:
+  # CONFIRMED: huawei_vrp_display_lldp_neighbor.textfsm
+  description: "Show connected neighbors via LLDP"
+  native: ["display lldp neighbor"]
+  parse: ntc
+
+show_acl:
+  # CONFIRMED: huawei_vrp_display_acl_all.textfsm
+  description: "Show configured ACLs and their rules"
+  native: ["display acl all"]
+  parse: ntc
+
+
+show_version:
+  # CONFIRMED: huawei_vrp_display_version.textfsm
+  description: "Show OS version, uptime, and system serial numbers"
+  native: ["display version"]
+  parse: ntc
+
+show_device:
+  # CONFIRMED: huawei_vrp_display_device.textfsm
+  description: "Show installed hardware modules and device status"
+  native: ["display device"]
+  parse: ntc
+
+show_module_info:
+  # CONFIRMED: huawei_vrp_display_module-information_verbose.textfsm
+  description: "Show detailed board/module hardware information"
+  native: ["display module-information verbose"]
+  parse: ntc
+
+show_temperature:
+  # CONFIRMED: huawei_vrp_display_temperature.textfsm
+  description: "Check chassis temperature sensors"
+  native: ["display temperature"]
+  parse: ntc
+
+check_ntp:
+  # CONFIRMED: huawei_vrp_display_ntp_status.textfsm
+  description: "Check NTP synchronization status"
+  native: ["display ntp status"]
+  parse: ntc
+
+check_cpu:
+  # NOT COVERED — no huawei_vrp CPU-usage template in ntc-templates today.
+  description: "Check system CPU utilization"
+  native: ["display cpu-usage"]
+  parse: ntc
+
+check_memory:
+  # NOT COVERED — no huawei_vrp memory-usage template in ntc-templates today.
+  description: "Check system RAM utilization"
+  native: ["display memory-usage"]
+  parse: ntc
+
+show_logs:
+  # NOT COVERED — no huawei_vrp log-buffer template in ntc-templates today.
+  description: "Show recent system syslog messages"
+  native: ["display logbuffer"]
+  parse: ntc

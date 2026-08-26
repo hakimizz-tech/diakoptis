@@ -21,6 +21,7 @@ class Settings:
     # File Paths
     inventory_path: Path
     command_map_path: Path
+    templates_root: Path
     
     # Concurrency & Connections (v2)
     max_concurrent_sessions: int
@@ -49,6 +50,10 @@ def _load_settings() -> Settings:
         ),
         command_map_path=Path(
             os.getenv("ASTER_CLI_COMMAND_MAP_PATH", "config/command_map/asterfusion.yaml")
+        ),
+
+        templates_root=Path(
+            os.getenv('TEMPLATES_ROOT_PATH', 'src/asterfusion/parsing/templates/')
         ),
         
         # Concurrency controls for the SessionPool

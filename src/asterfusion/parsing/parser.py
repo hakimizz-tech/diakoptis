@@ -1,138 +1,154 @@
 """
 Output Parser module.
-Dispatches raw switch CLI output to the correct TextFSM template based on the mapping.
-Defaults to 'ntc-templates' if a local template is not found.
+
+Resolution order per command (see plan.md §10):
+    1. Local TextFSM template, if one exists for this vendor/command.
+    2. ntc-templates community index, matched by (platform, command).
+    3. Raw text, unparsed — returned as-is rather than raising.
+
+`parse` in each vendor's command_map.yaml (see config/command_map/asterfusion.yaml) is one of:
+    "raw"                                   -> always return raw text
+    "ntc"                                   -> skip local, go straight to ntc-templates
+    "<relative/path/to/template.textfsm>"   -> local template; falls back to ntc, then raw,
+                                                if the local file is missing or fails to match
 """
 
-import textfsm
+import logging
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
-# Attempt to import ntc-templates for fallback support
+import textfsm
+
 try:
-    import ntc_templates
-    from ntc_templates.parse import parse_output
+    from ntc_templates.parse import parse_output as ntc_parse_output
     NTC_AVAILABLE = True
-    # Find the directory where NTC stores its raw .textfsm files
-    NTC_TEMPLATES_DIR = Path(ntc_templates.__file__).parent / "templates"
 except ImportError:
     NTC_AVAILABLE = False
-    NTC_TEMPLATES_DIR = None
+
+logger = logging.getLogger(__name__)
+
+ParsedResult = Union[List[Dict[str, Any]], str]
 
 
 class ParserError(Exception):
-    """Base exception for parsing errors."""
-    pass
+    """Raised for genuine parsing failures only — never for 'no template matched'.
 
-
-class TemplateNotFoundError(ParserError):
-    """Raised when a specified TextFSM template cannot be found locally or via NTC."""
-    pass
+    A miss at any stage of the fallback chain degrades to raw text instead of raising;
+    that behavior lives in parse_command(), not here.
+    """
 
 
 class OutputParser:
-    def __init__(self, templates_dir: Optional[str] = None):
+    def __init__(self, templates_root: Union[str, Path], default_ntc_platform: str = "cisco_ios"):
         """
-        Initializes the parser.
-        
         Args:
-            templates_dir: Optional override for the templates directory. 
-                           Defaults to the 'templates' folder relative to this file.
+            templates_root: base directory containing per-vendor local template folders,
+                             e.g. src/asterfusion_cli/parsing/templates/ (with asterfusion/,
+                             cisco_ios/, etc. subdirectories).
+            default_ntc_platform: fallback ntc-templates platform string used ONLY when a
+                             caller doesn't supply one explicitly. Kept explicit and logged
+                             when used, rather than silently assumed — pass the real vendor's
+                             platform (e.g. "huawei_vrp") from the driver whenever possible;
+                             see the note on Asterfusion in plan.md §10 before relying on this
+                             default for sonic-cli output, since column layouts differ vendor
+                             to vendor and a mismatched platform will typically fail to match
+                             cleanly rather than raise.
         """
-        if templates_dir:
-            self.templates_dir = Path(templates_dir)
-        else:
-            self.templates_dir = Path(__file__).parent / "templates"
-            
-        self.templates_dir.mkdir(parents=True, exist_ok=True)
+        self.templates_root = Path(templates_root)
+        self.default_ntc_platform = default_ntc_platform
 
-    def parse(self, raw_output: str, strategy: str) -> Union[List[Dict[str, Any]], str]:
+    def parse_command(
+        self,
+        raw_output: str,
+        command: str,
+        parse_spec: str,
+        ntc_platform: Optional[str] = None,
+        ntc_command_override: Optional[str] = None,
+    ) -> ParsedResult:
         """
-        Parses a single raw text string based on the given strategy.
-        
-        Args:
-            raw_output: The raw text from the switch.
-            strategy: 'raw', 'textfsm:<filename.textfsm>', or 'ntc:<command>'.
-            
-        Returns:
-            A list of dictionaries if parsed via TextFSM/NTC, or the raw string if 'raw'.
-        """
-        strategy_lower = strategy.lower()
+        Parse one native command's raw output according to one command_map.yaml entry's
+        `parse` value.
 
-        if strategy_lower == "raw":
+        ntc_platform / ntc_command_override let a command_map entry match ntc-templates
+        against a DIFFERENT (platform, command) pair than what was actually sent to the
+        device — e.g. native "show mac" needs to match ntc's "show mac-address-table"
+        pattern to hit an existing Cisco template. These come from an explicit
+        `ntc_override:` block in the YAML entry (see command_map schema), never from
+        parsing the `parse` string itself — a structured field is validated and fails
+        loudly if malformed, where a string mini-language like "ntc:cisco_ios:show x"
+        silently gets misread as a local file path (see plan.md notes on this).
+
+        Using an override to force a template from an unrelated vendor onto this
+        platform's output is inherently a bet: ntc-templates matches on the command
+        string via regex, but a header/column mismatch in the actual data will still
+        make the parse fail or return garbage rows even when the command regex matches.
+        Verify against real captured output before trusting an override in production —
+        don't assume it works just because it doesn't raise.
+        """
+        if parse_spec == "raw":
             return raw_output.strip()
 
-        # 1. TextFSM Strategy (Local file with fallback to NTC directory)
-        if strategy_lower.startswith("textfsm:"):
-            template_filename = strategy.split(":", 1)[1].strip()
-            return self._parse_textfsm(raw_output, template_filename)
-
-        # 2. Native NTC Strategy (e.g., "ntc:show ip bgp summary" or "ntc:cisco_ios:show ip bgp")
-        if strategy_lower.startswith("ntc:"):
-            if not NTC_AVAILABLE:
-                raise ParserError("The 'ntc-templates' package is not installed. Run 'pip install ntc-templates'.")
-            
-            parts = strategy.split(":", 2)
-            if len(parts) == 3:
-                platform = parts[1].strip()
-                command = parts[2].strip()
-            else:
-                # FRR routing on AsterNOS closely mimics Cisco IOS syntax, 
-                # so it is the safest default platform for NTC lookups.
-                platform = "cisco_ios"
-                command = parts[1].strip()
-                
-            try:
-                return parse_output(platform=platform, command=command, data=raw_output)
-            except Exception as e:
-                raise ParserError(f"NTC parsing failed for command '{command}': {e}")
-
-        raise ParserError(f"Unknown parse strategy: '{strategy}'. Must be 'raw', 'textfsm:<filename>', or 'ntc:<command>'")
-
-    def parse_multiple(self, raw_outputs: Dict[str, str], strategy: str) -> Union[List[Dict[str, Any]], Dict[str, str]]:
-        """
-        Handles the dictionary of outputs returned by ConnectionManager.send_commands().
-        """
-        if strategy.lower() == "raw":
-            return raw_outputs
-
-        if not strategy.lower().startswith(("textfsm:", "ntc:")):
-            raise ParserError(f"Unknown parse strategy: '{strategy}'")
-
-        # TextFSM state machines process continuous streams of text.
-        # We concatenate the output of multiple commands and re-use the main parse logic.
-        combined_text = "\n".join(raw_outputs.values())
-        parsed_data = self.parse(combined_text, strategy)
-        if isinstance(parsed_data, str):
-            raise ParserError(f"Strategy '{strategy}' returned raw text unexpectedly")
-        return parsed_data
-
-    def _parse_textfsm(self, text: str, template_filename: str) -> List[Dict[str, Any]]:
-        """
-        Executes the TextFSM engine against the text. Looks locally first, then falls back to NTC.
-        """
-        template_path = self.templates_dir / template_filename
-        
-        # The NTC Fallback Logic
-        if not template_path.exists() and NTC_TEMPLATES_DIR is not None:
-            ntc_fallback_path = NTC_TEMPLATES_DIR / template_filename
-            if ntc_fallback_path.exists():
-                template_path = ntc_fallback_path
-
-        if not template_path.exists():
-            raise TemplateNotFoundError(
-                f"TextFSM template '{template_filename}' not found in local templates/ or ntc-templates."
+        if parse_spec != "ntc":
+            local_path = self.templates_root / parse_spec
+            if local_path.exists():
+                try:
+                    return self._parse_with_local_template(raw_output, local_path)
+                except textfsm.TextFSMError as exc:
+                    raise ParserError(
+                        f"Local template '{local_path}' failed to parse output for "
+                        f"'{command}': {exc}"
+                    ) from exc
+            logger.info(
+                "Local template '%s' not found for '%s' — falling back to ntc-templates.",
+                local_path, command,
             )
 
+        # Reached when parse_spec == "ntc", or the local template above was missing.
+        match_command = ntc_command_override or command
+        if ntc_command_override:
+            logger.debug(
+                "ntc_override in effect for '%s': matching as '%s' instead.",
+                command, ntc_command_override,
+            )
+        return self._parse_with_ntc(raw_output, match_command, ntc_platform or self.default_ntc_platform)
+
+    def parse_commands(
+        self,
+        outputs: Dict[str, str],
+        parse_spec: str,
+        ntc_platform: Optional[str] = None,
+    ) -> Dict[str, ParsedResult]:
+        """
+        Parse a {native_command: raw_output} dict — one command_map.yaml entry can list
+        several native commands. Each is parsed against its OWN command name; outputs are
+        never concatenated, since one TextFSM template can't correctly parse two different
+        commands' output at once.
+        """
+        return {
+            command: self.parse_command(raw, command, parse_spec, ntc_platform)
+            for command, raw in outputs.items()
+        }
+
+    def _parse_with_ntc(self, raw_output: str, command: str, platform: str) -> ParsedResult:
+        if not NTC_AVAILABLE:
+            logger.warning("ntc-templates not installed — returning raw text for '%s'.", command)
+            return raw_output.strip()
+
         try:
-            with open(template_path, "r") as f:
-                fsm = textfsm.TextFSM(f)
-                headers = fsm.header
-                raw_results = fsm.ParseText(text)
-                
-                # Zip the headers and the row values together into a dictionary
-                structured_data = [dict(zip(headers, row)) for row in raw_results]
-                return structured_data
-                
-        except textfsm.TextFSMError as e:
-            raise ParserError(f"TextFSM parsing failed for template '{template_filename}': {e}")
+            return ntc_parse_output(platform=platform, command=command, data=raw_output)
+        except Exception as exc:
+            # No matching template (or any other ntc-templates failure) degrades to raw
+            # text, matching Netmiko's own use_textfsm=True behavior. This is a fallback,
+            # not an error condition, so it's logged rather than raised.
+            logger.info(
+                "ntc-templates found no match for platform='%s' command='%s' (%s) — "
+                "returning raw text.", platform, command, exc,
+            )
+            return raw_output.strip()
+
+    @staticmethod
+    def _parse_with_local_template(raw_output: str, template_path: Path) -> List[Dict[str, Any]]:
+        with open(template_path) as f:
+            fsm = textfsm.TextFSM(f)
+        rows = fsm.ParseText(raw_output)
+        return [dict(zip(fsm.header, row)) for row in rows]

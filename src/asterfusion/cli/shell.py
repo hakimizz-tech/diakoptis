@@ -44,9 +44,11 @@ class AsterfusionCLI:
             # 2. Initialize Core Engines (v2 Multi-Switch Capable)
             self.resolver = CommandResolver(self.command_map)
             self.pool = SessionPool(max_workers=SETTINGS.max_concurrent_sessions)
-            self.parser = OutputParser()
+            
             self.aggregator = ResultAggregator()
             self.renderer = OutputRenderer()
+
+            self.parser = OutputParser(templates_root=str(SETTINGS.templates_root))
             
             # 3. Initialize Diagnostics & Register Playbooks
             self.diagnostics = DiagnosticsEngine()

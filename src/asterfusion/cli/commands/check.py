@@ -76,8 +76,31 @@ def execute(args: list[str], shell_instance) -> None:
 
         for hostname, raw_dict in raw_multi_outputs.items():
             try:
-                # Parse
-                parsed_data = shell_instance.parser.parse_multiple(raw_dict, mapped_cmd.parse_strategy)
+                if len(mapped_cmd.native_commands) == 1:
+                    command = mapped_cmd.native_commands[0]
+                    parsed_data = shell_instance.parser.parse_command(
+                        raw_dict[command],
+                        command,
+                        mapped_cmd.parse_strategy,
+                    )
+                else:
+                    parsed_outputs = shell_instance.parser.parse_commands(
+                        raw_dict,
+                        mapped_cmd.parse_strategy,
+                    )
+                    parsed_rows = []
+                    for command_result in parsed_outputs.values():
+                        if not isinstance(command_result, list):
+                            raise ValueError(
+                                "Parser returned raw text for a command requiring structured data."
+                            )
+                        parsed_rows.extend(command_result)
+                    parsed_data = parsed_rows
+
+                if not isinstance(parsed_data, list):
+                    raise ValueError(
+                        "Parser returned raw text for a command requiring structured data."
+                    )
                 parsed_results[hostname] = parsed_data
                 
                 # Diagnose
