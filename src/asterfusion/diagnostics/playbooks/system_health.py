@@ -31,9 +31,16 @@ def analyze(data: List[Dict[str, Any]], target: str | None = None, **kwargs) -> 
         try:
             cpu = float(row["CPU_PCT"])
             if cpu > 85.0:
-                findings.append(DiagnosticFinding(Severity.CRITICAL, f"CPU utilization critical at {cpu}%", {"action": "Check active processes."}))
+                findings.append(DiagnosticFinding(
+                    severity=Severity.CRITICAL,
+                    message=f"CPU utilization critical at {cpu}%",
+                    context={"action": "Check active processes."},
+                ))
             elif cpu > 70.0:
-                findings.append(DiagnosticFinding(Severity.WARNING, f"CPU utilization elevated at {cpu}%"))
+                findings.append(DiagnosticFinding(
+                    severity=Severity.WARNING,
+                    message=f"CPU utilization elevated at {cpu}%",
+                ))
         except ValueError:
             pass
 
@@ -50,9 +57,15 @@ def analyze(data: List[Dict[str, Any]], target: str | None = None, **kwargs) -> 
 
         if mem_pct is not None:
             if mem_pct > 90.0:
-                findings.append(DiagnosticFinding(Severity.CRITICAL, f"Memory utilization critical at {mem_pct:.1f}%"))
+                findings.append(DiagnosticFinding(
+                    severity=Severity.CRITICAL,
+                    message=f"Memory utilization critical at {mem_pct:.1f}%",
+                ))
             elif mem_pct > 75.0:
-                findings.append(DiagnosticFinding(Severity.WARNING, f"Memory utilization elevated at {mem_pct:.1f}%"))
+                findings.append(DiagnosticFinding(
+                    severity=Severity.WARNING,
+                    message=f"Memory utilization elevated at {mem_pct:.1f}%",
+                ))
     except ValueError:
         pass
 
@@ -61,14 +74,24 @@ def analyze(data: List[Dict[str, Any]], target: str | None = None, **kwargs) -> 
         try:
             disk = float(row["DISK_PCT"])
             if disk > 90.0:
-                findings.append(DiagnosticFinding(Severity.CRITICAL, f"Disk space critical at {disk}%", {"action": "Clear old logs or image files."}))
+                findings.append(DiagnosticFinding(
+                    severity=Severity.CRITICAL,
+                    message=f"Disk space critical at {disk}%",
+                    context={"action": "Clear old logs or image files."},
+                ))
             elif disk > 80.0:
-                findings.append(DiagnosticFinding(Severity.WARNING, f"Disk space elevated at {disk}%"))
+                findings.append(DiagnosticFinding(
+                    severity=Severity.WARNING,
+                    message=f"Disk space elevated at {disk}%",
+                ))
         except ValueError:
             pass
 
     # Global Health Fallback
     if not findings:
-        findings.append(DiagnosticFinding(Severity.PASS, "System resources (CPU/Mem/Disk) are healthy."))
+        findings.append(DiagnosticFinding(
+            severity=Severity.PASS,
+            message="System resources (CPU/Mem/Disk) are healthy.",
+        ))
         
     return findings
