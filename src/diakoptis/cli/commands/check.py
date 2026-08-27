@@ -4,8 +4,8 @@ Executes automated diagnostic playbooks concurrently across all active switches.
 Pivots the resulting data into a multi-switch comparison table.
 """
 
-from asterfusion.logging.session_log import audit_logger
-from asterfusion.resolver.resolver import CommandNotFoundError
+from diakoptis.logging.session_log import audit_logger
+from diakoptis.resolver.resolver import CommandNotFoundError
 
 
 def execute(args: list[str], shell_instance) -> None:
@@ -14,7 +14,7 @@ def execute(args: list[str], shell_instance) -> None:
     
     Args:
         args: List of string arguments (e.g., ['interfaces', 'Ethernet4', '--diff']).
-        shell_instance: The AsterfusionCLI instance.
+        shell_instance: The DiakoptisCLI instance.
     """
     if not args:
         print("[!] Usage: check <feature> [target] [--diff]")

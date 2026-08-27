@@ -4,8 +4,8 @@ Handles parsing target expressions and initiating concurrent SSH sessions
 to multiple switches via the Session Pool.
 """
 
-from asterfusion.logging.session_log import audit_logger
-from asterfusion.targeting.target_parser import TargetParseError
+from diakoptis.logging.session_log import audit_logger
+from diakoptis.targeting.target_parser import TargetParseError
 
 
 def execute(args: list[str], shell_instance) -> None:
@@ -14,7 +14,7 @@ def execute(args: list[str], shell_instance) -> None:
     
     Args:
         args: List of string arguments provided by the user (e.g., ['leaf01,leaf02']).
-        shell_instance: The AsterfusionCLI instance.
+        shell_instance: The diakoptisCLI instance.
     """
     if not args:
         print("[!] Usage: connect <target-expression>")

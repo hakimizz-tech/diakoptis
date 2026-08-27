@@ -7,9 +7,9 @@ Uses ThreadPoolExecutor to fan-out commands to all active sessions in parallel.
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Dict, List, Any, Optional
 
-from asterfusion.drivers.base import SwitchDriver
-from asterfusion.drivers.factory import get_driver, UnsupportedVendorError
-from asterfusion.connection.exceptions import SwitchConnectionError
+from diakoptis.drivers.base import SwitchDriver
+from diakoptis.drivers.factory import get_driver, UnsupportedVendorError
+from diakoptis.connection.exceptions import SwitchConnectionError
 
 
 class SessionPool:

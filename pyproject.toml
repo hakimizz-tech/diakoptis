@@ -3,9 +3,9 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "asterfusion-cli"
+name = "diakoptis"
 version = "0.1.1"
-description = "Interactive troubleshooting CLI for Asterfusion (AsterNOS/SONiC) switches"
+description = "Interactive troubleshooting CLI for switches"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
@@ -44,18 +44,18 @@ dev = [
 ]
 
 [project.scripts]
-# This creates a terminal command called 'aster-cli' that users can run from anywhere
-aster-cli = "asterfusion.__main__:main"
+# This creates a terminal command called 'diakoptis' that users can run from anywhere
+diakoptis = "diakoptis.__main__:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["asterfusion*"]
+include = ["diakoptis*"]
 
 # Tool Configurations
 
 [tool.pytest.ini_options]
 minversion = "7.0"
-addopts = "-ra -q --cov=asterfusion"
+addopts = "-ra -q --cov=diakoptis"
 testpaths = [
     "tests",
 ]

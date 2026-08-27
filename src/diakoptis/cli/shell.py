@@ -11,28 +11,29 @@ from prompt_toolkit.formatted_text import HTML
 from prompt_toolkit.patch_stdout import patch_stdout
 
 # Import all the core backend systems 
-from asterfusion.config.settings import SETTINGS
-from asterfusion.config.inventory import Inventory, InventoryError
-from asterfusion.config.command_map import CommandMap, CommandMapError
-from asterfusion.config.credentials import CredentialManager
-from asterfusion.targeting.target_parser import TargetParser
+from diakoptis.config.settings import SETTINGS
+from diakoptis.config.inventory import Inventory, InventoryError
+from diakoptis.config.command_map import CommandMap, CommandMapError
+from diakoptis.config.credentials import CredentialManager
+from diakoptis.targeting.target_parser import TargetParser
 
-from asterfusion.resolver.resolver import CommandResolver
-from asterfusion.connection.pool import SessionPool
-from asterfusion.parsing.parser import OutputParser
-from asterfusion.diagnostics.engine import DiagnosticsEngine
-from asterfusion.aggregation.aggregator import ResultAggregator
-from asterfusion.rendering.renderer import OutputRenderer
-from asterfusion.logging.session_log import audit_logger
+from diakoptis.resolver.resolver import CommandResolver
+from diakoptis.connection.pool import SessionPool
+from diakoptis.parsing.parser import OutputParser
+from diakoptis.diagnostics.engine import DiagnosticsEngine
+from diakoptis.aggregation.aggregator import ResultAggregator
+from diakoptis.rendering.renderer import OutputRenderer
+from diakoptis.logging.session_log import audit_logger
 
 #  Import the command handlers 
-from asterfusion.cli.commands import connect, show, check
+from diakoptis.cli.commands import connect, show, check
 
 # Import Diagnostic Playbooks
-from asterfusion.diagnostics.playbooks import register_playbooks
+from diakoptis.diagnostics.playbooks import register_playbooks
 
 
-class AsterfusionCLI:
+
+class DiakoptisCLI:
     def __init__(self):
         try:
             # 1. Initialize Configuration & Data Layer
@@ -82,13 +83,13 @@ class AsterfusionCLI:
                 host_str = ",".join(hosts)
             else:
                 host_str = f"{len(hosts)} hosts"
-            return HTML(f'<ansicyan>aster-cli</ansicyan> [<ansigreen>{host_str}</ansigreen>] > ')
+            return HTML(f'<ansicyan>diakoptis-cli</ansicyan> [<ansigreen>{host_str}</ansigreen>] > ')
             
-        return HTML('<ansicyan>aster-cli</ansicyan> > ')
+        return HTML('<ansicyan>diakoptis-cli</ansicyan> > ')
 
     def cmdloop(self) -> int:
         """The main interactive loop. Blocks until the user exits."""
-        self.renderer.console.print("[bold cyan]Welcome to the Asterfusion Troubleshooting CLI (v2).[/bold cyan]")
+        self.renderer.console.print("[bold cyan]Welcome to the diakoptis Troubleshooting CLI (v2).[/bold cyan]")
         print("Type 'help' for a list of commands or 'exit' to quit.\n")
         
         audit_logger.info("CLI session started.")
@@ -127,7 +128,7 @@ class AsterfusionCLI:
         command = parts[0].lower()
         args = parts[1:]
 
-        # --- Built-in Shell Commands ---
+        # Built-in Shell Commands
         if command in ("exit", "quit"):
             self._shutdown()
             return True
@@ -144,7 +145,7 @@ class AsterfusionCLI:
             self._handle_disconnect()
             return False
 
-        # --- Operational Commands ---
+        # Operational Commands 
         elif command == "show":
             show.execute(args, self)
             return False
