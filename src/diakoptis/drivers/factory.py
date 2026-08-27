@@ -40,7 +40,7 @@ def get_driver(hostname: str, host_data: Dict[str, Any], credentials: Dict[str, 
     # 2. Safety: It prevents circular dependency errors during CLI boot up.
 
     if vendor == "asterfusion":
-        from asterfusion.drivers.asterfusion import AsterfusionDriver
+        from diakoptis.drivers.asterfusion import AsterfusionDriver
         return AsterfusionDriver(hostname, host_data, credentials)
         
     elif vendor == "cisco_ios":
@@ -50,7 +50,7 @@ def get_driver(hostname: str, host_data: Dict[str, Any], credentials: Dict[str, 
         raise UnsupportedVendorError("Cisco IOS support is planned but not yet implemented.")
         
     elif vendor == "huawei_vrp" or vendor == 'huawei':
-        from asterfusion.drivers.huawei import HuaweiDriver
+        from diakoptis.drivers.huawei import HuaweiDriver
         return HuaweiDriver(hostname, host_data, credentials)
         # raise UnsupportedVendorError("Huawei VRP support is planned but not yet implemented.")
         
