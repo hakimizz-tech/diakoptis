@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from typing import List, Dict, Any, Optional
 
 # Import the definitions we made in the configuration layer
-from asterfusion.config.command_map import CommandMap, CommandDefinition
+from diakoptis.config.command_map import CommandMap, CommandDefinition
 
 
 class ResolverError(Exception):

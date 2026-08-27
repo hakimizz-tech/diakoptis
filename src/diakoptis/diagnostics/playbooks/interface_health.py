@@ -4,8 +4,8 @@ Analyzes interface state and counters to diagnose Layer 1/2 issues.
 """
 
 from typing import List, Dict, Any
-from asterfusion.diagnostics.engine import DiagnosticFinding, Severity
-from asterfusion.diagnostics.playbooks.registry import playbook
+from diakoptis.diagnostics.engine import DiagnosticFinding, Severity
+from diakoptis.diagnostics.playbooks.registry import playbook
 
 @playbook("check_interface", "check_interfaces")
 def analyze(parsed_data: List[Dict[str, Any]], **kwargs) -> List[DiagnosticFinding]:

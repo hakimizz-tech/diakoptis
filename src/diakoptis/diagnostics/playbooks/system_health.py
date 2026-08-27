@@ -4,8 +4,8 @@ Analyzes CPU, Memory, and Disk utilization across any vendor.
 """
 
 from typing import List, Dict, Any
-from asterfusion.diagnostics.engine import DiagnosticFinding, Severity
-from asterfusion.diagnostics.playbooks.registry import playbook
+from diakoptis.diagnostics.engine import DiagnosticFinding, Severity
+from diakoptis.diagnostics.playbooks.registry import playbook
 
 @playbook("check_cpu", "check_memory", "check_disk")
 def analyze(data: List[Dict[str, Any]], target: str | None = None, **kwargs) -> List[DiagnosticFinding]:

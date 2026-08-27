@@ -11,7 +11,7 @@ from rich.panel import Panel
 from rich.text import Text
 from rich.theme import Theme
 
-from asterfusion.diagnostics.engine import DiagnosticFinding, Severity
+from diakoptis.diagnostics.engine import DiagnosticFinding, Severity
 
 # Define a custom theme for consistent colors across the CLI
 custom_theme = Theme({

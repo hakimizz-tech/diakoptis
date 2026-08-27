@@ -6,7 +6,7 @@ Analyzes parsed switch data against predefined playbooks to surface actionable f
 from enum import Enum
 from dataclasses import dataclass, field
 from typing import Dict, List, Any, Callable, Optional
-from asterfusion.logging.session_log import audit_logger
+from diakoptis.logging.session_log import audit_logger
 
 
 class Severity(Enum):

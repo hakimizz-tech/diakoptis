@@ -5,8 +5,8 @@ Implements the SwitchDriver interface using Netmiko.
 
 from typing import Any, Dict, List, Optional
 import logging
-from asterfusion.drivers.base import SwitchDriver
-from asterfusion.connection.exceptions import (
+from diakoptis.drivers.base import SwitchDriver
+from diakoptis.connection.exceptions import (
     SwitchAuthError,
     SwitchTimeoutError,
     SwitchConnectionError

@@ -4,7 +4,7 @@ Instantiates the correct SwitchDriver based on the vendor string in the inventor
 """
 
 from typing import Dict, Any
-from asterfusion.drivers.base import SwitchDriver
+from diakoptis.drivers.base import SwitchDriver
 
 
 class UnsupportedVendorError(Exception):

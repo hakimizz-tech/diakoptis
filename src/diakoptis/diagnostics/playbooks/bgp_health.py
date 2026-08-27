@@ -4,8 +4,8 @@ Analyzes BGP summary data to detect dropped peers, idle sessions, or routing ano
 """
 
 from typing import List, Dict, Any
-from asterfusion.diagnostics.engine import DiagnosticFinding, Severity
-from asterfusion.diagnostics.playbooks.registry import playbook
+from diakoptis.diagnostics.engine import DiagnosticFinding, Severity
+from diakoptis.diagnostics.playbooks.registry import playbook
 
 @playbook("check_bgp", "check_bgp_neighbor")
 def analyze(parsed_data: List[Dict[str, Any]], **kwargs) -> List[DiagnosticFinding]:

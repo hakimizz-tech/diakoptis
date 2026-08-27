@@ -3,8 +3,8 @@
 import logging
 from typing import Any, Dict, List, Optional
 
-from asterfusion.connection.exceptions import SwitchAuthError, SwitchConnectionError
-from asterfusion.drivers.base import SwitchDriver
+from diakoptis.connection.exceptions import SwitchAuthError, SwitchConnectionError
+from diakoptis.drivers.base import SwitchDriver
 from netmiko import ConnectHandler, NetmikoAuthenticationException, NetmikoTimeoutException
 
 

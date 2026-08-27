@@ -8,7 +8,7 @@ import logging
 import getpass
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
-from asterfusion.config.settings import SETTINGS
+from diakoptis.config.settings import SETTINGS
 
 AUDIT_LOGGER_NAME = "asterfusion_audit"
 
