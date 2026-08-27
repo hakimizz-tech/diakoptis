@@ -4,8 +4,8 @@ Translates user 'show ...' input into a mapped command, executes it concurrently
 across all active switches via the SessionPool, and aggregates the results.
 """
 
-from asterfusion.logging.session_log import audit_logger
-from asterfusion.resolver.resolver import CommandNotFoundError
+from diakoptis.logging.session_log import audit_logger
+from diakoptis.resolver.resolver import CommandNotFoundError
 
 
 def execute(args: list[str], shell_instance) -> None:
@@ -14,7 +14,7 @@ def execute(args: list[str], shell_instance) -> None:
     
     Args:
         args: List of string arguments provided by the user (e.g., ['interfaces']).
-        shell_instance: The AsterfusionCLI instance.
+        shell_instance: The DiakoptisCLI instance.
     """
     if not args:
         print("[!] Usage: show <feature> [options]")
@@ -67,10 +67,35 @@ def execute(args: list[str], shell_instance) -> None:
             # Flatten the dict values into a single string for raw rendering fallback
             combined_raw = "\n".join(raw_dict.values())
             raw_flattened[hostname] = combined_raw
-            
+
             if parse_strategy != "raw":
                 try:
-                    parsed_results[hostname] = shell_instance.parser.parse_multiple(raw_dict, parse_strategy)
+                    if len(native_commands) == 1:
+                        command = native_commands[0]
+                        parsed_data = shell_instance.parser.parse_command(
+                            raw_dict[command],
+                            command,
+                            parse_strategy,
+                        )
+                    else:
+                        parsed_outputs = shell_instance.parser.parse_commands(
+                            raw_dict,
+                            parse_strategy,
+                        )
+                        parsed_rows = []
+                        for command_result in parsed_outputs.values():
+                            if not isinstance(command_result, list):
+                                raise ValueError(
+                                    "Parser returned raw text for a command requiring structured data."
+                                )
+                            parsed_rows.extend(command_result)
+                        parsed_data = parsed_rows
+
+                    if not isinstance(parsed_data, list):
+                        raise ValueError(
+                            "Parser returned raw text for a command requiring structured data."
+                        )
+                    parsed_results[hostname] = parsed_data
                 except Exception as e:
                     audit_logger.warning(f"Parsing failed for {hostname}: {e}")
                     # If TextFSM fails on one switch, inject a dummy row so the user sees the error
