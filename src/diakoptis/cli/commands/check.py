@@ -36,9 +36,19 @@ def execute(args: list[str], shell_instance) -> None:
     clean_args = [arg for arg in args if arg != "--diff"]
     
     feature = clean_args[0].lower()
-    target = clean_args[1] if len(clean_args) > 1 else None
-    
+    target = None
     command_key = f"check_{feature}"
+
+    if feature == "bgp" and len(clean_args) > 1:
+        second = clean_args[1].lower()
+        if second in {"neighbor", "neighbour"}:
+            target = clean_args[2] if len(clean_args) > 2 else None
+            command_key = "check_bgp"
+        else:
+            target = clean_args[1]
+            command_key = "check_bgp"
+    elif len(clean_args) > 1:
+        target = clean_args[1]
     
     # Determine the primary key for the Comparison Aggregator matrix
     # (In a larger app, this mapping could live in the command_map.yaml)
@@ -57,7 +67,10 @@ def execute(args: list[str], shell_instance) -> None:
     try:
         # 2. Command Resolution
         try:
-            mapped_cmd = shell_instance.resolver.resolve(command_key, target=target)
+            if command_key == "check_bgp" and target is not None:
+                mapped_cmd = shell_instance.resolver.resolve(command_key)
+            else:
+                mapped_cmd = shell_instance.resolver.resolve(command_key, target=target)
         except CommandNotFoundError:
             print(f"[!] Diagnostics Error: '{command_key}' is not a registered check command.")
             return
