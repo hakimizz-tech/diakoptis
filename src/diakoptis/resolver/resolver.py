@@ -3,6 +3,7 @@ Command Resolver module.
 Translates friendly CLI commands into formatted native switch commands.
 """
 
+import string
 from dataclasses import dataclass
 from typing import List, Dict, Any, Optional
 
@@ -25,6 +26,11 @@ class MissingArgumentError(ResolverError):
     pass
 
 
+class UnusedArgumentError(ResolverError):
+    """Raised when an argument is provided but the native command does not accept it."""
+    pass
+
+
 @dataclass
 class ResolvedCommand:
     """
@@ -33,6 +39,7 @@ class ResolvedCommand:
     friendly_key: str
     native_commands: List[str]
     parse_strategy: str
+    ntc_override: Optional[Dict[str, str]] = None
 
 
 class CommandResolver:
@@ -51,7 +58,7 @@ class CommandResolver:
         
         Args:
             command_key: The friendly command name (e.g., 'check_interface').
-            **kwargs: Dynamic arguments to inject (e.g., interface='Ethernet0').
+            **kwargs: Dynamic arguments to inject (e.g., target='Ethernet0').
             
         Returns:
             A ResolvedCommand object ready to be sent to the Connection Manager.
@@ -59,6 +66,7 @@ class CommandResolver:
         Raises:
             CommandNotFoundError: If the key doesn't exist in the YAML.
             MissingArgumentError: If the YAML expects a variable that wasn't provided.
+            UnusedArgumentError: If a variable was provided but the YAML doesn't use it.
         """
         definition: Optional[CommandDefinition] = self.command_map.get_command(command_key)
         
@@ -67,31 +75,50 @@ class CommandResolver:
                 f"Command '{command_key}' is not mapped in command_map.yaml."
             )
 
-        resolved_native_cmds = []
+        # 1. Analyze the native commands to find exactly what arguments they expect
+        expected_args = set()
+        formatter = string.Formatter()
+        for raw_cmd in definition.native:
+            # formatter.parse returns tuples of (literal_text, field_name, format_spec, conversion)
+            for _, field_name, _, _ in formatter.parse(raw_cmd):
+                if field_name:
+                    expected_args.add(field_name)
+
+        # 2. Strict Check: Did we pass arguments the command doesn't need?
+        # We ignore kwargs that are None (often passed by default from CLI frameworks)
+        provided_args = {k for k, v in kwargs.items() if v is not None}
+        unused_args = provided_args - expected_args
         
+        if unused_args:
+            raise UnusedArgumentError(
+                f"Command '{command_key}' does not accept these arguments: {', '.join(unused_args)}. "
+                f"Expected: {', '.join(expected_args) if expected_args else 'None'}"
+            )
+
+        # 3. Format the commands
+        resolved_native_cmds = []
         for raw_cmd in definition.native:
             try:
-                # Inject the kwargs into the command string.
-                # E.g. "show interface {interface}".format(interface="Ethernet0")
                 formatted_cmd = raw_cmd.format(**kwargs)
                 resolved_native_cmds.append(formatted_cmd)
                 
             except KeyError as e:
-                # This happens if the YAML has `{interface}` but kwargs didn't include 'interface'
                 missing_var = e.args[0]
                 raise MissingArgumentError(
                     f"Command '{command_key}' requires the argument '{missing_var}', "
                     f"but it was not provided."
                 )
             except IndexError:
-                # Catches cases where someone used {} instead of {named_var} in the YAML
                 raise ResolverError(
                     f"Command '{command_key}' has invalid formatting in command_map.yaml. "
-                    "Always use named variables like {interface} instead of {}."
+                    "Always use named variables like {target} instead of {}."
                 )
 
+        # 4. Return the fully resolved command, ensuring ntc_override is passed through
         return ResolvedCommand(
             friendly_key=command_key,
             native_commands=resolved_native_cmds,
-            parse_strategy=definition.parse
+            parse_strategy=definition.parse,
+            # Use getattr safely in case CommandDefinition hasn't fully updated yet
+            ntc_override=getattr(definition, 'ntc_override', None) 
         )

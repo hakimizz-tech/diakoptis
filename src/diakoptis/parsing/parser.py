@@ -117,6 +117,7 @@ class OutputParser:
         outputs: Dict[str, str],
         parse_spec: str,
         ntc_platform: Optional[str] = None,
+        ntc_command_override: Optional[str] = None,
     ) -> Dict[str, ParsedResult]:
         """
         Parse a {native_command: raw_output} dict — one command_map.yaml entry can list
@@ -125,7 +126,13 @@ class OutputParser:
         commands' output at once.
         """
         return {
-            command: self.parse_command(raw, command, parse_spec, ntc_platform)
+            command: self.parse_command(
+                raw,
+                command,
+                parse_spec,
+                ntc_platform=ntc_platform,
+                ntc_command_override=ntc_command_override,
+            )
             for command, raw in outputs.items()
         }
 

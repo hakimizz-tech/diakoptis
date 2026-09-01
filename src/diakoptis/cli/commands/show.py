@@ -37,50 +37,58 @@ def execute(args: list[str], shell_instance) -> None:
     title_context = f"Show {' '.join(args).title()} across {host_context}"
 
     try:
+        mapped_cmd = None
+
         # 1. Command Resolution
         try:
             mapped_cmd = shell_instance.resolver.resolve(command_key)
             native_commands = mapped_cmd.native_commands
             parse_strategy = mapped_cmd.parse_strategy
-            
+
         except CommandNotFoundError:
-            # Pass-Through Mode 
+            # Pass-Through Mode
             print(f"[*] '{command_key}' not mapped in config. Passing raw command...")
             native_commands = [raw_fallback_cmd]
-            parse_strategy = "raw"  
-            
+            parse_strategy = "raw"
+
         audit_logger.info(
             f"Executing '{command_key}' across {len(hosts)} hosts. "
             f"Native commands: {native_commands}"
         )
-        
+
         # 2. Fan-Out Execution via Session Pool
         print(f"[*] Fetching data concurrently from {host_context}...")
-        # Returns: { "leaf01": {"show clock": "...", ...}, "leaf02": {...} }
         raw_multi_outputs = shell_instance.pool.send_commands_all(native_commands)
-        
+
         # 3. Parsing (per-switch)
         parsed_results = {}
         raw_flattened = {}
-        
+
         for hostname, raw_dict in raw_multi_outputs.items():
-            # Flatten the dict values into a single string for raw rendering fallback
             combined_raw = "\n".join(raw_dict.values())
             raw_flattened[hostname] = combined_raw
 
-            if parse_strategy != "raw":
+            if parse_strategy != "raw" and mapped_cmd:
                 try:
+                    override = mapped_cmd.ntc_override
+                    ntc_platform = override.get("platform") if override else None
+                    ntc_command_override = override.get("command") if override else None
+
                     if len(native_commands) == 1:
                         command = native_commands[0]
                         parsed_data = shell_instance.parser.parse_command(
                             raw_dict[command],
                             command,
                             parse_strategy,
+                            ntc_platform=ntc_platform,
+                            ntc_command_override=ntc_command_override,
                         )
                     else:
                         parsed_outputs = shell_instance.parser.parse_commands(
                             raw_dict,
                             parse_strategy,
+                            ntc_platform=ntc_platform,
+                            ntc_command_override=ntc_command_override,
                         )
                         parsed_rows = []
                         for command_result in parsed_outputs.values():
@@ -98,7 +106,6 @@ def execute(args: list[str], shell_instance) -> None:
                     parsed_results[hostname] = parsed_data
                 except Exception as e:
                     audit_logger.warning(f"Parsing failed for {hostname}: {e}")
-                    # If TextFSM fails on one switch, inject a dummy row so the user sees the error
                     parsed_results[hostname] = [{"PARSE_ERROR": str(e)}]
         
         # 4. Aggregation & Rendering

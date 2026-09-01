@@ -1,0 +1,120 @@
+# config/command_map/ipinfusion_ocnos.yaml
+#
+# Vendor command map: IP Infusion OcNOS
+# Parsing strategy: mixed — ntc where genuinely covered, a local template where a
+# confirmed real sample made one safe to write, raw everywhere else (per explicit
+# instruction: no ntc template -> raw or a local template, not a speculative guess).
+#
+# ntc-templates coverage check (against the live template index, not memory): the
+# "ipinfusion_ocnos" platform IS registered in ntc-templates, but has essentially ONE
+# confirmed template — ipinfusion_ocnos_show_lldp_table.textfsm, added in a single
+# community PR (v3.2, "show lldp table"). No other OcNOS command was found covered
+# after multiple targeted searches. Treat that absence as "not found today," not
+# "provably absent forever" — but don't rely on it either.
+#
+# Native commands below are sourced from IP Infusion's own documentation
+# (docs.ipinfusion.com / documentation.ipinfusion.com), not memory — cited inline per
+# entry. A couple of things worth knowing about OcNOS's CLI that differ from the other
+# two vendor files:
+#   - No plain "show version" was found in the docs searched. The closest confirmed
+#     equivalent is `show system-information os`; verify against real hardware before
+#     assuming full parity with show_version elsewhere.
+#   - `show mac address-table bridge <n>` requires a bridge-group number — defaulted to
+#     bridge 1 (OcNOS's single-bridge default) below; needs real Resolver argument
+#     support (see {target} note in asterfusion.yaml) for multi-bridge deployments.
+
+show_interfaces:
+  # Source: documentation.ipinfusion.com — show-interface.htm ("show interface brief (IFNAME|)")
+  description: "Show general interface operational status"
+  native: ["show interface brief"]
+  parse: raw   # no confirmed ntc coverage; candidate for a local template later
+
+show_interface_errors:
+  # Source: same page — full "show interface" output includes CRC/frame/input-error
+  # counters inline (e.g. "input errors 0 ... CRC 0 frame 0"), same situation as
+  # Huawei VRP: no dedicated errors-only command on this platform.
+  description: "Show detailed interface status and error counters (full 'show interface' output)"
+  native: ["show interface"]
+  parse: raw
+
+check_optics:
+  # Source: documentation.ipinfusion.com — show_interface_transceiver_details.htm
+  # Confirmed real sample shows DOM temperature/threshold data per lane — genuinely
+  # matches the "optical DOM/DDM levels" need this friendly name maps to elsewhere.
+  description: "Show optical transceiver DOM/DDM levels (temperature, thresholds) for all ports"
+  native: ["show interface transceiver details"]
+  parse: raw   # verbose multi-lane paragraph output; not a clean table, stays raw regardless of ntc coverage
+
+check_optics_port:
+  description: "Show optical DOM/DDM levels for a specific interface (e.g. check optics_port xe1)"
+  native: ['show interface {target} transceiver details']
+
+check_bgp:
+  # Source: documentation.ipinfusion.com — show_bgp_summary.htm ("show ip bgp summary")
+  description: "Check BGP peer state and prefix counts"
+  native: ["show ip bgp summary"]
+  parse: raw
+
+check_routing_table:
+  # Source: documentation.ipinfusion.com — show-ip-route.htm
+  description: "Show the global IP routing table"
+  native: ["show ip route"]
+  parse: raw
+
+check_vlan:
+  # Source: documentation.ipinfusion.com — show-vlan-brief.htm. Confirmed real sample
+  # output (clean fixed-column table with header + "Total VLANs:" footer) made this the
+  # one command worth writing a local template for now rather than leaving as raw — see
+  # templates/ipinfusion_ocnos/show_vlan_brief.textfsm.
+  description: "Show VLAN configuration and member ports"
+  native: ["show vlan brief"]
+  parse: ipinfusion_ocnos/show_vlan_brief.textfsm
+
+check_mac_table:
+  # Source: docs.ipinfusion.com — BridgeCLIcmds ("show mac address-table bridge <1-32>")
+  # ASSUMPTION: bridge group defaulted to 1 (OcNOS's single-bridge default per its own
+  # docs: "OcNOS supports only configuration of a single bridge"). Verify on real hardware.
+  description: "Show the MAC address table"
+  native: ["show mac address-table bridge 1"]
+  parse: raw
+
+show_arp:
+  # Source: documentation.ipinfusion.com — show-arp.htm. Also a clean, well-documented
+  # tabular sample (Address/Age/MAC/Interface/State) — a good second candidate for a
+  # local template later, left as raw for now to keep this round's scope to one.
+  description: "Show the ARP cache (IP to MAC mapping)"
+  native: ["show arp"]
+  parse: raw
+
+show_lldp_neighbors:
+  # Source: ntc-templates v3.2 changelog — the ONE confirmed OcNOS template.
+  description: "Show connected neighbors via LLDP"
+  native: ["show lldp table"]
+  parse: ntc
+
+show_logs:
+  # Source: docs.ipinfusion.com — Syslog_Commands ("show logging last <1-9999>")
+  description: "Show recent system syslog messages"
+  native: ["show logging last 100"]
+  parse: raw   # logs should never be forced into tables
+
+check_cpu:
+  # Source: documentation.ipinfusion.com — show-system-information.htm
+  # ("show system-information (all|fan|psu|os|cpu|bios|cpu-load|board-info)")
+  description: "Check system CPU utilization"
+  native: ["show system-information cpu-load"]
+  parse: raw
+
+check_environment:
+  # Source: same page — confirmed real sample shows PSU/fan FRU details.
+  description: "Check system hardware health (fans, power supplies)"
+  native: ["show system-information all"]
+  parse: raw
+
+show_version:
+  # Source: same page. No plain "show version" found in docs searched — this is the
+  # closest confirmed equivalent, not a verified drop-in replacement. Verify on real
+  # hardware before treating this as equivalent to show_version on other vendors.
+  description: "Show OS version and board information (closest confirmed equivalent to show_version — see note above)"
+  native: ["show system-information os"]
+  parse: raw

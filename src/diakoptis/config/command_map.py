@@ -22,6 +22,7 @@ class CommandDefinition:
     description: str
     native: List[str]
     parse: str
+    ntc_override: Optional[Dict[str, str]] = None
 
 
 class CommandMap:
@@ -59,19 +60,38 @@ class CommandMap:
                 raise CommandMapError(f"Command '{cmd_key}' is missing the required 'native' key.")
             if "parse" not in cmd_data:
                 raise CommandMapError(f"Command '{cmd_key}' is missing the required 'parse' key.")
+            if 'description' not in cmd_data:
+                raise CommandMapError(f"command '{cmd_key}' is missing the required 'description' key ")
             
             # Ensure 'native' is always a list, even if the user only put one command as a string
             native_cmds = cmd_data["native"]
             if isinstance(native_cmds, str):
                 native_cmds = [native_cmds]
 
+            ntc_override = cmd_data.get("ntc_override")
+            if ntc_override is not None:
+                if not isinstance(ntc_override, dict):
+                    raise CommandMapError(
+                        f"Command '{cmd_key}' has an invalid 'ntc_override' value; it must be a mapping with 'platform' and 'command'."
+                    )
+                missing_keys = [key for key in ("platform", "command") if key not in ntc_override]
+                if missing_keys:
+                    raise CommandMapError(
+                        f"Command '{cmd_key}' is missing required ntc_override keys: {', '.join(missing_keys)}."
+                    )
+                if not all(isinstance(ntc_override[key], str) for key in ("platform", "command")):
+                    raise CommandMapError(
+                        f"Command '{cmd_key}' has a malformed 'ntc_override'; 'platform' and 'command' must both be strings."
+                    )
+
             # Construct the dataclass. 
             # Note: Parameterized targets like {target} remain as raw strings here.
             # The CommandResolver handles injecting the actual target values later.
             self.commands[cmd_key] = CommandDefinition(
-                description=cmd_data.get("description", "No description provided."),
+                description=cmd_data.get("description"),
                 native=native_cmds,
-                parse=cmd_data["parse"]
+                parse=cmd_data["parse"],
+                ntc_override=ntc_override,
             )
 
     def get_command(self, command_key: str) -> Optional[CommandDefinition]:
