@@ -117,7 +117,7 @@ check_bgp:
 check_bgp_neighbor:
   description: "Deep dive into a specific BGP neighbor (e.g. check bgp_neighbor 10.0.0.1)"
   native: ["show ip bgp neighbors {target}"]
-  parse: raw
+  parse: asterfusion/sonic_show_ip_bgp_neighbors_detail.textfsm
 
 
 check_cpu:

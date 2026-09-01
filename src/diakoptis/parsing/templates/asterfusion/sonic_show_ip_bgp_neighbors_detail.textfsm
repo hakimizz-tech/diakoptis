@@ -1,0 +1,28 @@
+Value NEIGHBOR (\S+)
+Value REMOTE_AS (\d+)
+Value BGP_STATE (\w+)
+Value UPTIME (\S+)
+Value REMOTE_ROUTER_ID (\S+)
+Value LOCAL_ROUTER_ID (\S+)
+Value HOLD_TIME (\d+)
+Value KEEPALIVE_INTERVAL (\d+)
+Value ACCEPTED_PREFIXES (\d+)
+Value CONNECTIONS_ESTABLISHED (\d+)
+Value CONNECTIONS_DROPPED (\d+)
+Value MESSAGES_SENT (\d+)
+Value MESSAGES_RECEIVED (\d+)
+Value LAST_RESET (\S+.*)
+
+Start
+  ^BGP neighbor is ${NEIGHBOR}, remote AS ${REMOTE_AS}
+  ^  BGP version \d+, remote router ID ${REMOTE_ROUTER_ID}, local router ID ${LOCAL_ROUTER_ID}
+  ^  BGP state = ${BGP_STATE}, up for ${UPTIME}
+  ^  Hold time is ${HOLD_TIME}, keepalive interval is ${KEEPALIVE_INTERVAL}
+  ^    Total:\s+${MESSAGES_SENT}\s+${MESSAGES_RECEIVED}
+  ^  ${ACCEPTED_PREFIXES} accepted prefixes
+  ^  Connections established ${CONNECTIONS_ESTABLISHED}; dropped ${CONNECTIONS_DROPPED}
+  ^  Last reset ${LAST_RESET} -> Record
+
+
+
+

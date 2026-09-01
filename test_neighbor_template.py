@@ -1,0 +1,102 @@
+#!/usr/bin/env python3
+"""Quick test of the BGP neighbor detail template."""
+
+import sys
+import textfsm
+from pathlib import Path
+
+# Sample output from the user
+sample_output = """BGP neighbor is 10.120.30.1, remote AS 64517, local AS 64517, internal link
+Hostname: COOP-TRUST
+  BGP version 4, remote router ID 10.120.30.1, local router ID 10.120.30.2
+  BGP state = Established, up for 4d21h31m
+  Last read 00:00:49, Last write 00:00:50
+  Hold time is 180, keepalive interval is 60 seconds
+  Neighbor capabilities:
+    4 Byte AS: advertised and received
+    Extended Message: advertised and received
+    AddPath:
+      IPv4 Unicast: RX advertised and received
+    Long-lived Graceful Restart: advertised and received
+      Address families by peer:
+    Route refresh: advertised and received(old & new)
+    Enhanced Route Refresh: advertised and received
+    Address Family IPv4 Unicast: advertised and received
+    Hostname Capability: advertised (name: COOP-HOUSE,domain name: n/a) received (name: COOP-TRUST,domain name: n/a)
+    Graceful Restart Capability: advertised and received
+      Remote Restart timer is 120 seconds
+      Address families by peer:
+        none
+  Graceful restart information:
+    End-of-RIB send: IPv4 Unicast
+    End-of-RIB received: IPv4 Unicast
+    Local GR Mode: Helper*
+    Remote GR Mode: Helper
+    R bit: True
+    Timers:
+      Configured Restart Time(sec): 120
+      Received Restart Time(sec): 120
+    IPv4 Unicast:
+      F bit: False
+      End-of-RIB sent: Yes
+      End-of-RIB sent after update: Yes
+      End-of-RIB received: Yes
+      Timers:
+        Configured Stale Path Time(sec): 360
+  Message statistics:
+    Inq depth is 0
+    Outq depth is 0
+                         Sent       Rcvd
+    Opens:                  6          6
+    Notifications:          8          2
+    Updates:               39        105
+    Keepalives:        103710     103698
+    Route Refresh:          0          0
+    Capability:             0          0
+    Total:             103763     103811
+  Minimum time between advertisement runs is 0 seconds
+  Update source is 10.120.30.2
+
+ For address family: IPv4 Unicast
+  Update group 2, subgroup 2
+  Packet Queue length 0
+  Inbound soft reconfiguration allowed
+  Community attribute sent to this neighbor(all)
+  11 accepted prefixes
+
+  Connections established 6; dropped 5
+  Last reset 4d22h31m,  No AFI/SAFI activated for peer
+Local host: 10.120.30.2, Local port: 179
+Foreign host: 10.120.30.1, Foreign port: 42531
+Nexthop: 10.120.30.2
+Nexthop global: fe80::ac4e:f6ff:fead:5022
+Nexthop local: fe80::ac4e:f6ff:fead:5022
+BGP connection: non shared network
+BGP Connect Retry Timer in Seconds: 120
+Estimated round trip time: 1 ms
+Read thread: on  Write thread: on  FD used: 28
+"""
+
+try:
+    template_path = Path("src/diakoptis/parsing/templates/asterfusion/sonic_show_ip_bgp_neighbors_detail.textfsm")
+    with open(template_path) as f:
+        fsm = textfsm.TextFSM(f)
+    
+    rows = fsm.ParseText(sample_output)
+    parsed = [dict(zip(fsm.header, row)) for row in rows]
+    
+    if parsed:
+        print("✅ Template parsed successfully!")
+        for i, row in enumerate(parsed):
+            print(f"\nRow {i}:")
+            for key, val in row.items():
+                if val:
+                    print(f"  {key}: {val}")
+    else:
+        print("❌ No data extracted by template")
+        sys.exit(1)
+except Exception as e:
+    print(f"❌ Error: {e}")
+    import traceback
+    traceback.print_exc()
+    sys.exit(1)

@@ -43,7 +43,7 @@ def execute(args: list[str], shell_instance) -> None:
         second = clean_args[1].lower()
         if second in {"neighbor", "neighbour"}:
             target = clean_args[2] if len(clean_args) > 2 else None
-            command_key = "check_bgp"
+            command_key = "check_bgp_neighbor"
         else:
             target = clean_args[1]
             command_key = "check_bgp"
@@ -67,10 +67,7 @@ def execute(args: list[str], shell_instance) -> None:
     try:
         # 2. Command Resolution
         try:
-            if command_key == "check_bgp" and target is not None:
-                mapped_cmd = shell_instance.resolver.resolve(command_key)
-            else:
-                mapped_cmd = shell_instance.resolver.resolve(command_key, target=target)
+            mapped_cmd = shell_instance.resolver.resolve(command_key, target=target)
         except CommandNotFoundError:
             print(f"[!] Diagnostics Error: '{command_key}' is not a registered check command.")
             return
