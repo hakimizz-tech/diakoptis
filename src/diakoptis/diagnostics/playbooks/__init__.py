@@ -5,6 +5,7 @@ Diagnostics playbook package exports and registration helpers.
 from diakoptis.diagnostics.playbooks.registry import PLAYBOOK_REGISTRY
 
 # Import modules so decorators execute and populate PLAYBOOK_REGISTRY.
+from diakoptis.diagnostics.playbooks import bgp_neighbor_detail  # noqa: F401
 from diakoptis.diagnostics.playbooks import bgp_health  # noqa: F401
 from diakoptis.diagnostics.playbooks import environment_health  # noqa: F401
 from diakoptis.diagnostics.playbooks import interface_health  # noqa: F401

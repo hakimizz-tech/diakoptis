@@ -52,7 +52,7 @@ def analyze(parsed_data: List[Dict[str, Any]], **kwargs) -> List[DiagnosticFindi
         if bgp_state.lower() == "established":
             findings.append(
                 DiagnosticFinding(
-                    severity=Severity.SUCCESS,
+                        severity=Severity.PASS,
                     message=f"BGP neighbor {neighbor} (AS {remote_as}) is ESTABLISHED (up for {uptime}).",
                     context={
                         "neighbor": neighbor,
