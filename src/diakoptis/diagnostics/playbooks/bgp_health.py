@@ -21,8 +21,9 @@ def analyze(parsed_data: List[Dict[str, Any]], **kwargs) -> List[DiagnosticFindi
     """
     findings: List[DiagnosticFinding] = []
     
-    # If the user ran `check bgp neighbor 10.0.0.1`, cmd_kwargs passed this as `neighbor_ip`.
-    target_neighbor = kwargs.get("neighbor_ip")
+    # The CLI passes the positional target as `target`; older direct playbook callers may
+    # pass `neighbor_ip` explicitly. Accept either name for compatibility.
+    target_neighbor = kwargs.get("neighbor_ip") or kwargs.get("target")
 
     # Guard clause in case the parser failed to return a list
     if not isinstance(parsed_data, list):
@@ -42,17 +43,27 @@ def analyze(parsed_data: List[Dict[str, Any]], **kwargs) -> List[DiagnosticFindi
         ]
 
     for bgp_data in parsed_data:
-        neighbor = bgp_data.get("NEIGHBOR", "Unknown")
+        neighbor = (
+            bgp_data.get("NEIGHBOR")
+            or bgp_data.get("bgp_neighbor")
+            or bgp_data.get("neighbor")
+            or "Unknown"
+        )
 
         # If a specific target was requested, skip all other peers
         if target_neighbor and neighbor != target_neighbor:
             continue
 
-        # In SONiC, the column is usually 'State/PfxRcd'
-        # If it's a number, the session is established. If it's text, it's in a transitional/down state.
-        state_or_pfx = bgp_data.get("STATE_PFX_RCD", "").strip()
-        uptime = bgp_data.get("UP_DOWN", "Unknown")
-        remote_as = bgp_data.get("AS", "Unknown")
+        # ntc-templates uses 'state_or_prefixes_received' while some older fixtures and
+        # raw vendor output use 'STATE_PFX_RCD' / 'AS' / 'UP_DOWN'. Accept both shapes.
+        state_or_pfx = (
+            str(bgp_data.get("STATE_PFX_RCD")
+                or bgp_data.get("state_or_prefixes_received")
+                or bgp_data.get("STATE_OR_PREFIXES_RECEIVED")
+                or "").strip()
+        )
+        uptime = str(bgp_data.get("UP_DOWN") or bgp_data.get("up_down") or "Unknown")
+        remote_as = str(bgp_data.get("AS") or bgp_data.get("neighbor_as") or bgp_data.get("AS_NUMBER") or "Unknown")
 
         # Rule 1: Established & Healthy (State is a digit)
         if state_or_pfx.isdigit():

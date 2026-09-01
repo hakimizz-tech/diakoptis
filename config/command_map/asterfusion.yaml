@@ -39,11 +39,8 @@
 # SONiC-based platforms are often reached differently (e.g. `show system-memory`, or outside
 # sonic-cli entirely) — verify these before relying on them at all.
 
-# -- Hardware / Environment ----------------------------------------------------
 
 # TODO (carried over, unresolved): rename/restructure to check_power specifically, or keep
-# as a combined environment check covering fans+power+temperature? Decide before local
-# template is written, since the template's structure depends on this.
 check_environment:
   description: "Check system hardware health (fans, power supplies, temperature)"
   native: ["show environment all"]
@@ -51,21 +48,14 @@ check_environment:
 
 check_optics:
   description: "Show optical transceiver DOM/DDM levels (Tx/Rx power) for all ports"
-  # CORRECTED: "show interface transceiver lpmode" reports low-power-mode state, not
-  # DOM/DDM levels — per SONiC's own command reference, "show interface transceiver info"
-  # (or "... eeprom" for full DOM detail) is the command that actually matches this
-  # description. Verify the exact AsterNOS equivalent before relying on it.
   native: ["show interface transceiver info"]
-  parse: raw   # DOM/DDM output is verbose per-port paragraph text, not a clean table
+  parse: raw  
 
 check_optics_port:
   description: "Show optical DOM/DDM levels for a specific port (e.g. check optics_port Ethernet4)"
-  # NOTE: {target} substitution is not implemented in the Resolver yet — this entry is a
-  # design placeholder for parameterized commands, not runnable as-is.
   native: ["show interface {target} transceiver"]
-  parse: raw   # verbose paragraph output breaks tables; must remain raw regardless
+  parse: raw  
 
-# -- Layer 2 / Switching (Interfaces, MAC, LLDP, LAG) ---------------------------
 
 show_interfaces:
   description: "Show general interface operational status"
@@ -122,38 +112,35 @@ show_route:
 check_bgp:
   description: "Check BGP peer state and prefix counts"
   native: ["show ip bgp summary"]
-  parse: ntc
+  parse: asterfusion/sonic_show_ip_bgp_summary.textfsm
 
 check_bgp_neighbor:
   description: "Deep dive into a specific BGP neighbor (e.g. check bgp_neighbor 10.0.0.1)"
-  # NOTE: same {target} caveat as check_optics_port — not runnable until the Resolver
-  # supports argument substitution.
   native: ["show ip bgp neighbors {target}"]
-  parse: ntc
+  parse: raw
 
-# -- System / Admin (CPU, Memory, Logs) -----------------------------------------
 
 check_cpu:
   description: "Check system CPU utilization"
-  native: ["show system cpu-usage"]   # UNVERIFIED — see header caveat
+  native: ["show system cpu-usage"]  
   parse: asterfusion/sonic_show_system_cpu_usage.textfsm   
 
 check_memory:
   description: "Check system RAM utilization"
-  native: ["show system memory-usage"]   # UNVERIFIED — see header caveat
-  parse: asterfusion/sonic_show_system_memory_usage.textfsm   # MISSING
+  native: ["show system memory-usage"]  
+  parse: asterfusion/sonic_show_system_memory_usage.textfsm 
 
 check_disk:
   description: "Check system disk utilization"
-  native: ["show system disk-usage"]   # UNVERIFIED — see header caveat
-  parse: asterfusion/sonic_show_system_disk_usage.textfsm   # MISSING
+  native: ["show system disk-usage"]   
+  parse: asterfusion/sonic_show_system_disk_usage.textfsm 
 
-show_logs:
-  description: "Show recent system syslog messages"
-  native: ["show logging"]
-  parse: raw   # logs should never be forced into tables
+# show_logs:
+#   description: "Show recent system syslog messages"
+#   native: ["show logging"]
+#   parse: raw   
 
 show_version:
   description: "Show OS version, uptime, and system serial numbers"
   native: ["show version"]
-  parse: ntc
+  parse: raw

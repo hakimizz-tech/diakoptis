@@ -1,0 +1,21 @@
+Value NEIGHBOR (\S+)
+Value V (\d+)
+Value AS (\d+)
+Value MSGRCVD (\d+)
+Value MSGSENT (\d+)
+Value TBLVER (\d+)
+Value INQ (\d+)
+Value OUTQ (\d+)
+Value UP_DOWN (\S+)
+Value STATE_PFX_RCD (\d+|Idle|Active|Connect|Established|OpenSent|OpenConfirm|Closing|Admin|Shut|[A-Za-z0-9-]+)
+Value PFXSNT (\d+|N/A)
+Value DESC (.*)
+
+Start
+  ^Neighbor\s+V\s+AS\s+MsgRcvd\s+MsgSent\s+TblVer\s+InQ\s+OutQ\s+Up/Down\s+State/PfxRcd\s+PfxSnt\s+Desc -> Data
+
+Data
+  ^${NEIGHBOR}\s+${V}\s+${AS}\s+${MSGRCVD}\s+${MSGSENT}\s+${TBLVER}\s+${INQ}\s+${OUTQ}\s+${UP_DOWN}\s+${STATE_PFX_RCD}\s+${PFXSNT}\s+${DESC}\s* -> Record
+  ^\s*$$
+  ^Total number of neighbors\s+\d+\s* -> Continue
+  ^.* -> Continue

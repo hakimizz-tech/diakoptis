@@ -125,6 +125,36 @@ def test_bgp_health_all_rules(mock_bgp_data):
     assert "administratively shut down" in findings[3].message
 
 
+def test_bgp_health_ntc_style_rows():
+    """Tests BGP behavior for ntc-templates output keys from `show ip bgp summary`."""
+    data = [
+        {"bgp_neighbor": "10.120.30.1", "state_or_prefixes_received": "1", "up_down": "00:18:31", "neighbor_as": "64517"},
+        {"bgp_neighbor": "10.120.30.2", "state_or_prefixes_received": "0", "up_down": "00:05:00", "neighbor_as": "64518"},
+    ]
+
+    findings = bgp_health.analyze(data)
+
+    assert len(findings) == 2
+    assert findings[0].severity == Severity.PASS
+    assert "10.120.30.1" in findings[0].message
+    assert findings[1].severity == Severity.WARNING
+    assert "receiving 0 prefixes" in findings[1].message
+
+
+def test_bgp_health_target_filter_matches_cli_target():
+    """Tests that the generic CLI `target` arg is accepted for specific-neighbor lookups."""
+    data = [
+        {"bgp_neighbor": "10.120.30.1", "state_or_prefixes_received": "1", "up_down": "00:18:31", "neighbor_as": "64517"},
+        {"bgp_neighbor": "10.120.30.2", "state_or_prefixes_received": "0", "up_down": "00:05:00", "neighbor_as": "64518"},
+    ]
+
+    findings = bgp_health.analyze(data, target="10.120.30.2")
+
+    assert len(findings) == 1
+    assert findings[0].severity == Severity.WARNING
+    assert "10.120.30.2" in findings[0].message
+
+
 def test_bgp_health_empty_data():
     """Tests BGP behavior when no neighbors are configured."""
     findings = bgp_health.analyze([])
