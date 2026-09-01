@@ -44,8 +44,10 @@ dev = [
 ]
 
 [project.scripts]
-# This creates a terminal command called 'diakoptis' that users can run from anywhere
+# Expose the CLI under the supported command names.
 diakoptis = "diakoptis.__main__:main"
+diakoptis-cli = "diakoptis.__main__:main"
+diakoptis_cli = "diakoptis.__main__:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

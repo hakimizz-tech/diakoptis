@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Asterfusion CLI (v2) - Developer Environment Setup Script
+# Diakoptis CLI - Developer Environment Setup Script
 # This script initializes a local development environment.
 # Run this from the root of the repository: ./scripts/dev_setup.sh
 
@@ -13,7 +13,7 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
-echo -e "${BLUE}[*] Starting Asterfusion CLI Dev Setup...${NC}"
+echo -e "${BLUE}[*] Starting Diakoptis CLI Dev Setup...${NC}"
 
 # 1. Ensure we are in the project root
 if [[ ! -f "pyproject.toml" ]]; then
@@ -39,7 +39,7 @@ source .venv/bin/activate
 echo -e "${BLUE}[*] Upgrading pip...${NC}"
 pip install --upgrade pip
 
-echo -e "${BLUE}[*] Installing asterfusion-cli in editable mode with [dev] dependencies...${NC}"
+echo -e "${BLUE}[*] Installing diakoptis in editable mode with [dev] dependencies...${NC}"
 # This reads the pyproject.toml and installs the CLI, plus dev tools (pytest, etc.)
 pip install -e ".[dev]"
 
@@ -72,7 +72,7 @@ echo -e "To start using the CLI, activate your virtual environment:"
 echo -e "  ${YELLOW}source .venv/bin/activate${NC}"
 echo -e ""
 echo -e "Then, you can launch the shell from anywhere by typing:"
-echo -e "  ${YELLOW}aster-cli${NC}"
+echo -e "  ${YELLOW}diakoptis${NC}"
 echo -e ""
 echo -e "Don't forget to update your credentials in the ${YELLOW}.env${NC} file!"
 echo -e "======================================================"

@@ -1,6 +1,6 @@
 """
-Main entry point for the diakoptis Troubleshooting CLI.
-Can be executed via `diakoptis-cli` or `python -m diakoptis_cli`.
+Main entry point for the Diakoptis Troubleshooting CLI.
+Can be executed via `diakoptis-cli` or `diakoptis`.
 """
 import sys
 
