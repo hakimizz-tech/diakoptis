@@ -53,7 +53,7 @@ def _load_settings() -> Settings:
         ),
 
         templates_root=Path(
-            os.getenv('TEMPLATES_ROOT_PATH', 'src/asterfusion/parsing/templates/')
+            os.getenv('TEMPLATES_ROOT_PATH', 'src/diakoptis/parsing/templates')
         ),
         
         # Concurrency controls for the SessionPool

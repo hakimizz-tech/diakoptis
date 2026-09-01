@@ -1,5 +1,5 @@
-Value CPU_PCT (\d+\.\d+)
+Value CPU_PCT (\d+(?:\.\d+)?)
 
 Start
-  # Matches the row with the percentage: |     18.3      |
+  # Matches the row with the percentage: |     18.3      | or | 11 |
   ^\|\s*${CPU_PCT}\s*\| -> Record

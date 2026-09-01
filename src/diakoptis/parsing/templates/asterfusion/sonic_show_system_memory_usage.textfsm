@@ -1,9 +1,9 @@
-Value MEM_PCT (\d+\.\d+)
+Value MEM_PCT (\d+(?:\.\d+)?)
 Value TOTAL_MEM_BYTES (\d+)
 Value USED_MEM_BYTES (\d+)
 
 Start
-  # Matches the percentage row
+  # Matches the percentage row, whether it's an integer or decimal
   ^\|\s*${MEM_PCT}\s*\|
   # Matches the bytes row and triggers the record save
   ^\|\s*${TOTAL_MEM_BYTES}\(B\)\s*\|\s*${USED_MEM_BYTES}\(B\).* -> Record

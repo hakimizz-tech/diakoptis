@@ -1,9 +1,9 @@
-Value DISK_PCT (\d+\.\d+)
+Value DISK_PCT (\d+(?:\.\d+)?)
 Value TOTAL_DISK_BYTES (\d+)
 Value USED_DISK_BYTES (\d+)
 
 Start
-  # Matches the percentage row
+  # Matches the percentage row, whether it's an integer or decimal
   ^\|\s*${DISK_PCT}\s*\|
   # Matches the bytes row and triggers the record save
   ^\|\s*${TOTAL_DISK_BYTES}\(B\)\s*\|\s*${USED_DISK_BYTES}\(B\).* -> Record
