@@ -5,6 +5,8 @@ Handles user input, tab-completion, multi-switch targeting, and command dispatch
 
 import sys
 import shlex
+from pathlib import Path
+from typing import Dict, List
 from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import WordCompleter
 from prompt_toolkit.formatted_text import HTML
@@ -38,12 +40,18 @@ class DiakoptisCLI:
         try:
             # 1. Initialize Configuration & Data Layer
             self.inventory = Inventory(str(SETTINGS.inventory_path))
-            self.command_map = CommandMap(str(SETTINGS.command_map_path))
+            self.command_maps = {
+                map_name: CommandMap(str(map_path))
+                for map_name, map_path in SETTINGS.command_map_paths.items()
+            }
+            if not self.command_maps:
+                raise CommandMapError(
+                    f"No command maps found in {SETTINGS.command_path_dir}."
+                )
             self.cred_manager = CredentialManager(self.inventory)
             self.target_parser = TargetParser(self.inventory)
             
             # 2. Initialize Core Engines (v2 Multi-Switch Capable)
-            self.resolver = CommandResolver(self.command_map)
             self.pool = SessionPool(max_workers=SETTINGS.max_concurrent_sessions)
             
             self.aggregator = ResultAggregator()
@@ -63,8 +71,11 @@ class DiakoptisCLI:
         # 4. Set up dynamic tab-completion
         self.known_commands = ["connect", "disconnect", "exit", "quit", "help", "show", "check"]
         
-        for mapped_cmd in self.command_map.list_commands():
-            self.known_commands.append(mapped_cmd.replace("_", " "))
+        for command_map in self.command_maps.values():
+            for mapped_cmd in command_map.list_commands():
+                friendly_command = mapped_cmd.replace("_", " ")
+                if friendly_command not in self.known_commands:
+                    self.known_commands.append(friendly_command)
             
         self.completer = WordCompleter(
             self.known_commands, 
@@ -73,6 +84,41 @@ class DiakoptisCLI:
         )
         
         self.session = PromptSession(completer=self.completer)
+
+    def command_map_groups(self) -> Dict[Path, List[str]]:
+        """Group active hostnames by their resolved command-map path."""
+        hostnames = self.pool.active_hostnames
+        groups: Dict[Path, List[str]] = {}
+        for hostname in hostnames:
+            host_data = self.inventory.get_host(hostname)
+            map_path = SETTINGS.command_map_path_for(host_data)
+            groups.setdefault(map_path, []).append(hostname)
+        return groups
+
+    def command_map_for_host(self, hostname: str) -> CommandMap:
+        """Return the loaded command map for one active or configured host."""
+        host_data = self.inventory.get_host(hostname)
+        map_path = SETTINGS.command_map_path_for(host_data)
+        return self.command_maps[map_path.stem.lower()]
+
+    @property
+    def command_resolvers(self) -> Dict[Path, CommandResolver]:
+        """Return one resolver for every loaded command-map group."""
+        return {
+            map_path: CommandResolver(command_map)
+            for map_name, command_map in self.command_maps.items()
+            for map_path in [SETTINGS.command_map_paths[map_name]]
+        }
+
+    @property
+    def resolver(self) -> CommandResolver:
+        """Backward-compatible resolver for single-vendor sessions."""
+        groups = self.command_map_groups()
+        if len(groups) != 1:
+            raise CommandMapError(
+                "Multiple command maps are active; use command_resolvers by group."
+            )
+        return CommandResolver(self.command_maps[next(iter(groups)).stem.lower()])
 
     def _get_prompt(self):
         """Generates a dynamic, colored prompt string showing active hosts."""
@@ -190,9 +236,14 @@ class DiakoptisCLI:
         table.add_column("Command", style="cyan bold")
         table.add_column("Description", style="white")
         
-        for key, definition in self.command_map.commands.items():
-            friendly_name = key.replace("_", " ")
-            table.add_row(friendly_name, definition.description)
+        seen_commands = set()
+        for command_map_name, command_map in self.command_maps.items():
+            for key, definition in command_map.commands.items():
+                if key in seen_commands:
+                    continue
+                seen_commands.add(key)
+                friendly_name = key.replace("_", " ")
+                table.add_row(friendly_name, definition.description)
             
         self.renderer.console.print(table)
         print()

@@ -34,6 +34,7 @@ class CommandMap:
             filepath: Path to the vendor-specific command map YAML file.
         """
         self.filepath = Path(filepath)
+        self.ntc_platform = self.filepath.stem.lower()
         self.commands: Dict[str, CommandDefinition] = {}
         
         self._load_and_validate()

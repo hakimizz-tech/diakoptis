@@ -30,6 +30,21 @@ logger = logging.getLogger(__name__)
 ParsedResult = Union[List[Dict[str, Any]], str]
 
 
+class RawParserOutput(str):
+    """Raw parser fallback carrying the reason structured parsing failed."""
+
+    reason: str
+    command: str
+    platform: str
+
+    def __new__(cls, value: str, reason: str, command: str, platform: str):
+        result = super().__new__(cls, value)
+        result.reason = reason
+        result.command = command
+        result.platform = platform
+        return result
+
+
 class ParserError(Exception):
     """Raised for genuine parsing failures only — never for 'no template matched'.
 
@@ -138,8 +153,14 @@ class OutputParser:
 
     def _parse_with_ntc(self, raw_output: str, command: str, platform: str) -> ParsedResult:
         if not NTC_AVAILABLE:
-            logger.warning("ntc-templates not installed — returning raw text for '%s'.", command)
-            return raw_output.strip()
+            logger.warning(
+                "Parser dependency missing: ntc-templates; platform='%s' command='%s'.",
+                platform,
+                command,
+            )
+            return RawParserOutput(
+                raw_output.strip(), "missing parser dependency", command, platform
+            )
 
         try:
             return ntc_parse_output(platform=platform, command=command, data=raw_output)
@@ -147,11 +168,15 @@ class OutputParser:
             # No matching template (or any other ntc-templates failure) degrades to raw
             # text, matching Netmiko's own use_textfsm=True behavior. This is a fallback,
             # not an error condition, so it's logged rather than raised.
-            logger.info(
-                "ntc-templates found no match for platform='%s' command='%s' (%s) — "
-                "returning raw text.", platform, command, exc,
+            logger.warning(
+                "No ntc template match: platform='%s' command='%s' (%s).",
+                platform,
+                command,
+                exc,
             )
-            return raw_output.strip()
+            return RawParserOutput(
+                raw_output.strip(), "no ntc template match", command, platform
+            )
 
     @staticmethod
     def _parse_with_local_template(raw_output: str, template_path: Path) -> List[Dict[str, Any]]:

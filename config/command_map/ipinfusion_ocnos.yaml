@@ -48,6 +48,7 @@ check_optics:
 check_optics_port:
   description: "Show optical DOM/DDM levels for a specific interface (e.g. check optics_port xe1)"
   native: ['show interface {target} transceiver details']
+  parse: raw
 
 check_bgp:
   # Source: documentation.ipinfusion.com — show_bgp_summary.htm ("show ip bgp summary")

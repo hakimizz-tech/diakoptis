@@ -5,11 +5,7 @@ Pivots the resulting data into a multi-switch comparison table.
 """
 
 from diakoptis.logging.session_log import audit_logger
-from diakoptis.resolver.resolver import (
-    CommandNotFoundError,
-    MissingArgumentError,
-    UnusedArgumentError,
-)
+from diakoptis.cli.execution import execute_grouped_command
 
 
 def execute(args: list[str], shell_instance) -> None:
@@ -65,78 +61,36 @@ def execute(args: list[str], shell_instance) -> None:
     title_context = f"Diagnostic: {feature.title()} across {host_context}"
 
     try:
-        # 2. Command Resolution
-        try:
-            mapped_cmd = shell_instance.resolver.resolve(command_key, target=target)
-        except CommandNotFoundError:
-            print(f"[!] Diagnostics Error: '{command_key}' is not a registered check command.")
-            return
-        except (MissingArgumentError, UnusedArgumentError) as e:
-            print(f"[!] Argument Error: {e}")
-            return
-
-        if mapped_cmd.parse_strategy == "raw":
-            print("[!] Diagnostics Error: Cannot run playbooks against 'raw' unparsed text.")
-            return
-
         audit_logger.info(f"Running diagnostics '{command_key}' across {len(hosts)} hosts.")
         print(f"[*] Analyzing '{feature}' across {host_context}...")
 
-        # 3. Fan-Out Execution
-        raw_multi_outputs = shell_instance.pool.send_commands_all(mapped_cmd.native_commands)
+        # 2. Resolve, execute, and parse independently per command-map group.
+        execution = execute_grouped_command(
+            shell_instance,
+            command_key,
+            target=target,
+            allow_raw=False,
+        )
+        for hostname, error in execution["errors"].items():
+            audit_logger.error(f"Diagnostics failed for {hostname}: {error}")
+            print(f"[!] {hostname}: {error}")
 
-        # 4. Parse Data & Run Diagnostics (Per-Switch)
-        parsed_results = {}
+        # 3. Run diagnostics for each successfully parsed host.
+        parsed_results = execution["parsed_results"]
         all_findings = []
-
-        for hostname, raw_dict in raw_multi_outputs.items():
+        for hostname, parsed_data in parsed_results.items():
             try:
-                override = mapped_cmd.ntc_override
-                ntc_platform = override.get("platform") if override else None
-                ntc_command_override = override.get("command") if override else None
-
-                if len(mapped_cmd.native_commands) == 1:
-                    command = mapped_cmd.native_commands[0]
-                    parsed_data = shell_instance.parser.parse_command(
-                        raw_dict[command],
-                        command,
-                        mapped_cmd.parse_strategy,
-                        ntc_platform=ntc_platform,
-                        ntc_command_override=ntc_command_override,
-                    )
-                else:
-                    parsed_outputs = shell_instance.parser.parse_commands(
-                        raw_dict,
-                        mapped_cmd.parse_strategy,
-                        ntc_platform=ntc_platform,
-                        ntc_command_override=ntc_command_override,
-                    )
-                    parsed_rows = []
-                    for command_result in parsed_outputs.values():
-                        if not isinstance(command_result, list):
-                            raise ValueError(
-                                "Parser returned raw text for a command requiring structured data."
-                            )
-                        parsed_rows.extend(command_result)
-                    parsed_data = parsed_rows
-
-                if not isinstance(parsed_data, list):
-                    raise ValueError(
-                        "Parser returned raw text for a command requiring structured data."
-                    )
-                parsed_results[hostname] = parsed_data
-
-                findings = shell_instance.diagnostics.analyze(command_key, parsed_data, target=target)
-
+                findings = shell_instance.diagnostics.analyze(
+                    command_key, parsed_data, target=target
+                )
                 for finding in findings:
-                    if not hasattr(finding, 'context') or finding.context is None:
+                    if not hasattr(finding, "context") or finding.context is None:
                         finding.context = {}
-                    finding.context['host'] = hostname
+                    finding.context["host"] = hostname
                 all_findings.extend(findings)
-
-            except Exception as e:
-                audit_logger.error(f"Diagnostics failed for {hostname}: {e}")
-                parsed_results[hostname] = [{"PARSE_ERROR": str(e)}]
+            except Exception as exc:
+                audit_logger.error(f"Diagnostics failed for {hostname}: {exc}")
+                execution["errors"][hostname] = str(exc)
 
         # Aggregation 
         if primary_key:

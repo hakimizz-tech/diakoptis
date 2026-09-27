@@ -5,7 +5,8 @@ Uses ThreadPoolExecutor to fan-out commands to all active sessions in parallel.
 """
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Dict, List, Any, Optional
+from pathlib import Path
+from typing import Callable, Dict, List, Any, Optional
 
 from diakoptis.drivers.base import SwitchDriver
 from diakoptis.drivers.factory import get_driver, UnsupportedVendorError
@@ -116,6 +117,60 @@ class SessionPool:
                 hostname, output_data = future.result()
                 results[hostname] = output_data
                 
+        return results
+
+    def group_sessions_by_command_map(
+        self,
+        command_map_for_driver: Callable[[SwitchDriver], Path],
+    ) -> Dict[Path, List[SwitchDriver]]:
+        """Group active sessions by their resolved command-map path."""
+        groups: Dict[Path, List[SwitchDriver]] = {}
+        for driver in self.active_sessions.values():
+            command_map_path = command_map_for_driver(driver)
+            groups.setdefault(command_map_path, []).append(driver)
+        return groups
+
+    def send_commands_by_group(
+        self,
+        groups: Dict[Path, List[SwitchDriver]],
+        commands_by_group: Dict[Path, List[str]],
+    ) -> Dict[str, Dict[str, str]]:
+        """Send each group's native commands only to that group's sessions.
+
+        Every driver in a group receives the complete command list assigned to
+        that command map, so multiple native commands are supported without
+        crossing vendor boundaries.
+        """
+        if not self.active_sessions:
+            raise SwitchConnectionError("Cannot send commands: No active sessions in the pool.")
+
+        results: Dict[str, Dict[str, str]] = {}
+
+        def _command_worker(driver: SwitchDriver, commands: List[str]):
+            try:
+                return driver.hostname, driver.send_native(commands)
+            except Exception as exc:
+                error_dict = {
+                    command: f"Driver execution error: {exc}"
+                    for command in commands
+                }
+                return driver.hostname, error_dict
+
+        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+            futures = []
+            for command_map_path, drivers in groups.items():
+                commands = commands_by_group.get(command_map_path, [])
+                if not commands:
+                    continue
+                futures.extend(
+                    executor.submit(_command_worker, driver, commands)
+                    for driver in drivers
+                )
+
+            for future in as_completed(futures):
+                hostname, output_data = future.result()
+                results[hostname] = output_data
+
         return results
 
     def disconnect_all(self) -> None:

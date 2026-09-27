@@ -39,6 +39,7 @@ class ResolvedCommand:
     friendly_key: str
     native_commands: List[str]
     parse_strategy: str
+    ntc_platform: str
     ntc_override: Optional[Dict[str, str]] = None
 
 
@@ -119,6 +120,7 @@ class CommandResolver:
             friendly_key=command_key,
             native_commands=resolved_native_cmds,
             parse_strategy=definition.parse,
+            ntc_platform=self.command_map.ntc_platform,
             # Use getattr safely in case CommandDefinition hasn't fully updated yet
             ntc_override=getattr(definition, 'ntc_override', None) 
         )

@@ -17,13 +17,13 @@ class HuaweiDriver(SwitchDriver):
         if not self.ip_address:
             raise ValueError(f"Host {self.hostname} is missing an IP address ('host field') in inventory")
 
-        #Huawei device type
+        # Huawei device type
         self.device_type = self.host_data.get('device_type', 'huawei')
 
-        #netmiko connection
+        # netmiko connection
         self.netmiko_conn : Optional[Any] = None
 
-        #suppress noisy Netmiko/Paramiko background logs unless explicitly needed
+        # suppress noisy Netmiko/Paramiko background logs unless explicitly needed
         logging.getLogger('netmiko').setLevel(logging.CRITICAL)
         logging.getLogger('paramiko').setLevel(logging.CRITICAL)
 
@@ -37,7 +37,8 @@ class HuaweiDriver(SwitchDriver):
             "username": self.credentials.get('username'),
             "password": self.credentials.get('password'),
             "global_delay_factor": 2,
-            'connection_timeout': 30,
+            'conn_timeout': 30,  # Time allowed for the initial TCP/SSH connection (default is 5)
+            'auth_timeout': 15,  # Time allowed for AAA/authentication authentication
         }
 
         #add the enable secret if provided
@@ -48,6 +49,7 @@ class HuaweiDriver(SwitchDriver):
 
         try:
             self.netmiko_conn = ConnectHandler(auto_connect=False, **huawei_device)
+            self.netmiko_conn._open()
 
             # Ensure we are in enable mode if a secret was provided
             if secret and not self.netmiko_conn.check_enable_mode():

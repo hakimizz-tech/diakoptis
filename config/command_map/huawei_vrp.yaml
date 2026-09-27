@@ -35,7 +35,7 @@ show_interfaces:
   # CONFIRMED: huawei_vrp_display_interface_brief.textfsm
   description: "Show general interface operational status"
   native: ["display interface brief"]
-  parse: ntc
+  parse: raw
 
 show_interface_errors:
   # CONFIRMED: huawei_vrp_display_interface.textfsm
@@ -44,121 +44,121 @@ show_interface_errors:
   # errors-only command, so this friendly name maps to the fuller output on Huawei.
   description: "Show detailed interface status and error counters (full 'display interface' output)"
   native: ["display interface"]
-  parse: ntc
+  parse: raw
 
 check_eth_trunk:
   # CONFIRMED: huawei_vrp_display_eth-trunk.textfsm
   description: "Verify Eth-Trunk (LACP / link aggregation) bundle status"
   native: ["display eth-trunk"]
-  parse: ntc
+  parse: raw
 
 
 check_bgp:
   # CONFIRMED: huawei_vrp_display_bgp_peer.textfsm
   description: "Check BGP peer state and prefix counts"
   native: ["display bgp peer"]
-  parse: ntc
+  parse: raw
 
 check_ospf:
   # NOT COVERED — no huawei_vrp OSPF peer template in ntc-templates today.
   description: "Check OSPF neighbor/peer state"
   native: ["display ospf peer"]
-  parse: ntc
+  parse: raw
 
 check_routing_table:
   # CONFIRMED: huawei_vrp_display_ip_routing-table_verbose.textfsm
   description: "Show the global IP routing table"
   native: ["display ip routing-table verbose"]
-  parse: ntc
+  parse: raw
 
 check_ipv6_neighbors:
   # CONFIRMED: huawei_vrp_display_ipv6_neighbors.textfsm
   description: "Show the IPv6 neighbor (NDP) table"
   native: ["display ipv6 neighbors"]
-  parse: ntc
+  parse: raw
 
 check_arp:
   # CONFIRMED: huawei_vrp_display_arp_brief.textfsm
   description: "Show the ARP cache (IP to MAC mapping)"
   native: ["display arp brief"]
-  parse: ntc
+  parse: raw
 
 
 check_vlan:
   # CONFIRMED: huawei_vrp_display_vlan_brief.textfsm
   description: "Show VLAN configuration and member ports"
   native: ["display vlan brief"]
-  parse: ntc
+  parse: raw
 
 show_port_vlan:
   # CONFIRMED: huawei_vrp_display_port_vlan.textfsm
   description: "Show per-port VLAN assignment"
   native: ["display port vlan"]
-  parse: ntc
+  parse: raw
 
 check_mac_table:
   # CONFIRMED: huawei_vrp_display_mac-address.textfsm
   description: "Show the MAC address table"
   native: ["display mac-address"]
-  parse: ntc
+  parse: raw
 
 show_lldp_neighbors:
   # CONFIRMED: huawei_vrp_display_lldp_neighbor.textfsm
   description: "Show connected neighbors via LLDP"
   native: ["display lldp neighbor"]
-  parse: ntc
+  parse: raw
 
 show_acl:
   # CONFIRMED: huawei_vrp_display_acl_all.textfsm
   description: "Show configured ACLs and their rules"
   native: ["display acl all"]
-  parse: ntc
+  parse: raw
 
 
 show_version:
   # CONFIRMED: huawei_vrp_display_version.textfsm
   description: "Show OS version, uptime, and system serial numbers"
   native: ["display version"]
-  parse: ntc
+  parse: raw
 
 show_device:
   # CONFIRMED: huawei_vrp_display_device.textfsm
   description: "Show installed hardware modules and device status"
   native: ["display device"]
-  parse: ntc
+  parse: raw
 
 show_module_info:
   # CONFIRMED: huawei_vrp_display_module-information_verbose.textfsm
   description: "Show detailed board/module hardware information"
   native: ["display module-information verbose"]
-  parse: ntc
+  parse: raw
 
 show_temperature:
   # CONFIRMED: huawei_vrp_display_temperature.textfsm
   description: "Check chassis temperature sensors"
   native: ["display temperature"]
-  parse: ntc
+  parse: raw
 
 check_ntp:
   # CONFIRMED: huawei_vrp_display_ntp_status.textfsm
   description: "Check NTP synchronization status"
   native: ["display ntp status"]
-  parse: ntc
+  parse: raw
 
 check_cpu:
   # NOT COVERED — no huawei_vrp CPU-usage template in ntc-templates today.
   description: "Check system CPU utilization"
   native: ["display cpu-usage"]
-  parse: ntc
+  parse: raw
 
 check_memory:
   # NOT COVERED — no huawei_vrp memory-usage template in ntc-templates today.
   description: "Check system RAM utilization"
   native: ["display memory-usage"]
-  parse: ntc
+  parse: raw
 
 show_logs:
   # NOT COVERED — no huawei_vrp log-buffer template in ntc-templates today.
   description: "Show recent system syslog messages"
   native: ["display logbuffer"]
-  parse: ntc
+  parse: raw
