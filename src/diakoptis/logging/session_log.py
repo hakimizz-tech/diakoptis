@@ -9,8 +9,9 @@ import getpass
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from diakoptis.config.settings import SETTINGS
+from datetime import date, datetime
 
-AUDIT_LOGGER_NAME = "asterfusion_audit"
+AUDIT_LOGGER_NAME = "diakoptis_audit"
 
 
 class ContextFilter(logging.Filter):
@@ -26,6 +27,7 @@ class ContextFilter(logging.Filter):
         return True
 
 
+# Singleton function that return the instance of Logger
 def _setup_audit_logger() -> logging.Logger:
     """
     Configures and returns the global audit logger.
@@ -43,7 +45,8 @@ def _setup_audit_logger() -> logging.Logger:
 
     # Ensure log directory exists
     SETTINGS.log_dir.mkdir(parents=True, exist_ok=True)
-    audit_log_path = SETTINGS.log_dir / "aster_cli_audit.log"
+    audit_log_path = SETTINGS.log_dir / f"diakotis_audit_{datetime.now().date()}.log"
+    
 
     # Setup file handler: 5 MB max per file, keep 5 rotating backups
     file_handler = RotatingFileHandler(

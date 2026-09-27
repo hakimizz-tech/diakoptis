@@ -39,7 +39,9 @@ class DiakoptisCLI:
     def __init__(self):
         try:
             # 1. Initialize Configuration & Data Layer
-            self.inventory = Inventory(str(SETTINGS.inventory_path))
+            self.inventory = Inventory(filepath=str(SETTINGS.inventory_path))
+
+            # Registry pattern to get the command map name and command map
             self.command_maps = {
                 map_name: CommandMap(str(map_path))
                 for map_name, map_path in SETTINGS.command_map_paths.items()
@@ -135,7 +137,7 @@ class DiakoptisCLI:
 
     def cmdloop(self) -> int:
         """The main interactive loop. Blocks until the user exits."""
-        self.renderer.console.print("[bold cyan]Welcome to the diakoptis Troubleshooting CLI (v2).[/bold cyan]")
+        self.renderer.console.print("[bold cyan]Welcome to the diakoptis Troubleshooting CLI .[/bold cyan]")
         print("Type 'help' for a list of commands or 'exit' to quit.\n")
         
         audit_logger.info("CLI session started.")

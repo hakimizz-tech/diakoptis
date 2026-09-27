@@ -34,8 +34,19 @@
 show_interfaces:
   # CONFIRMED: huawei_vrp_display_interface_brief.textfsm
   description: "Show general interface operational status"
-  native: ["display interface brief"]
+  native: ["display ip interface brief | exclude unassigned"]
   parse: raw
+
+show_routing_table:
+  description: "show ip routing table"
+  native : ['display ip routing-table']
+  parse: raw
+
+show_ip_ospf:
+  description: "show ip routing ospf"
+  native: ['display ip routing-table protocol ospf']
+  parse: raw
+
 
 show_interface_errors:
   # CONFIRMED: huawei_vrp_display_interface.textfsm
@@ -96,7 +107,7 @@ show_port_vlan:
   native: ["display port vlan"]
   parse: raw
 
-check_mac_table:
+show mac:
   # CONFIRMED: huawei_vrp_display_mac-address.textfsm
   description: "Show the MAC address table"
   native: ["display mac-address"]
@@ -105,7 +116,7 @@ check_mac_table:
 show_lldp_neighbors:
   # CONFIRMED: huawei_vrp_display_lldp_neighbor.textfsm
   description: "Show connected neighbors via LLDP"
-  native: ["display lldp neighbor"]
+  native: ["display lldp neighbor brief"]
   parse: raw
 
 show_acl:

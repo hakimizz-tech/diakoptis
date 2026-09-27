@@ -26,7 +26,13 @@ class CommandDefinition:
 
 
 class CommandMap:
-    def __init__(self, filepath: Union[str, Path] = "config/command_map/asterfusion.yaml"):
+
+    # Explicitly slot the first three attributes, 
+    # and include '__dict__' to allow any other dynamic attributes
+    __slots__ = ['filepath', 'ntc_platform', 'commands', '__dict__']
+
+
+    def __init__(self, filepath: Union[str, Path]):
         """
         Initializes the command map by loading and parsing the YAML file.
         
@@ -43,11 +49,12 @@ class CommandMap:
         """
         Loads the YAML file and validates that every command has the required fields.
         """
-        if not self.filepath.exists():
-            raise CommandMapError(
-                f"Command map file not found at {self.filepath}. "
-                "Ensure your config/command_map/ directory contains the correct vendor YAML."
-            )
+        # NOTE: we don't this check as it is happenning in settings.py
+        # if not self.filepath.exists():
+        #     raise CommandMapError(
+        #         f"Command map file not found at {self.filepath}. "
+        #         "Ensure your config/command_map/ directory contains the correct vendor YAML."
+        #     )
 
         try:
             with open(self.filepath, "r") as f:

@@ -6,6 +6,7 @@ passwords via environment variables, ensuring no secrets are stored in plaintext
 
 import os
 from typing import Dict, Any
+from diakoptis.config.inventory import Inventory
 
 
 class CredentialResolutionError(Exception):
@@ -19,7 +20,9 @@ class CredentialManager:
     Reads the 'credential_profiles' block from the inventory object.
     """
 
-    def __init__(self, inventory):
+    __slots__ = ['inventory']
+
+    def __init__(self, inventory : Inventory):
         """
         Initializes the manager.
         
@@ -41,8 +44,10 @@ class CredentialManager:
         Raises:
             CredentialResolutionError: If the profile is undefined or env vars are missing.
         """
-        if not profile_name:
-            profile_name = "default"
+
+        # NOTE: this checks is provided by dict .get(key, default),DRY 
+        # if not profile_name:
+        #     profile_name = "default"
 
         # 1. Fetch the profile definition from the inventory
         profiles = self.inventory.get_profiles()

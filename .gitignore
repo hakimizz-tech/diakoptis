@@ -1,6 +1,3 @@
-# ==========================================
-# Asterfusion CLI - Project Specific
-# ==========================================
 # Ignore session logs and audit trails
 *.log
 logs/

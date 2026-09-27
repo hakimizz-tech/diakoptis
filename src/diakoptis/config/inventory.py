@@ -15,14 +15,14 @@ class InventoryError(Exception):
 
 
 class Inventory:
-    def __init__(self, filepath: str = "config/inventory.yaml"):
+    def __init__(self, *, filepath: str | None):
         """
         Initializes the inventory by loading and parsing the YAML file.
         
         Args:
             filepath: Path to the inventory.yaml file.
         """
-        self.filepath = Path(filepath)
+        self.filepath = Path(filepath if filepath else 'config/inventory.yaml')
         
         # Internal data stores mapping to the v2 YAML schema
         self._switches: Dict[str, Dict[str, Any]] = {}

@@ -8,14 +8,6 @@ with structured output parsing via local [TextFSM](https://github.com/google/tex
 templates and the community [ntc-templates](https://github.com/networktocode/ntc-templates)
 project as a fallback.
 
-## Why the rename
-
-This started as `asterfusion-cli` — a tool for Asterfusion (AsterNOS) switches specifically.
-Once the driver abstraction, per-vendor command maps, and multi-switch fan-out were designed
-in, the project stopped being about one vendor. **diakoptis** reflects what it actually is
-now: a tool for switches, plural — Asterfusion today, Huawei VRP with real structured-parsing
-coverage already, and any future vendor that implements the same driver interface.
-
 ## What it does
 
 - Connects to one or many switches over SSH via Netmiko.
@@ -122,17 +114,8 @@ directly from whichever command maps are loaded.
 
 Full design rationale, diagrams, and the decisions behind each piece (targeting syntax,
 multi-vendor driver abstraction, credential resolution, parser fallback chain) live in
-[`docs/diakoptis_cli_plan.md`](docs/diakoptis.md)
+[`docs/diakoptis_cli_plan_v2.md`](docs/diakoptis.md)
 
-```
-Interactive Shell -> Target Parser -> Session Pool (fan-out) -> Vendor Driver Factory
-                                                                       |
-                                                    Asterfusion / Huawei / (future vendors)
-                                                                       |
-                                            Output Parser (local -> ntc-templates -> raw)
-                                                                       |
-                                      Diagnostics Engine -> Aggregator -> Renderer
-```
 
 
 ## Extending to a new vendor
